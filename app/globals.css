@@ -1,4 +1,25 @@
 @import "tailwindcss";
+.canvas-label {
+  padding-left: 0 !important;
+}
+.resize-corner {
+  width: 18px !important;
+  height: 18px !important;
+  border: 0 !important;
+  cursor: nwse-resize;
+  background: linear-gradient(
+    135deg,
+    transparent 52%,
+    var(--cyan) 53%,
+    var(--cyan) 61%,
+    transparent 62%,
+    transparent 70%,
+    var(--cyan) 71%,
+    var(--cyan) 79%,
+    transparent 80%
+  );
+  touch-action: none;
+}
 .widget-color-settings {
   display: grid;
   gap: 10px;

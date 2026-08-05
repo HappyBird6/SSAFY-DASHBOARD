@@ -321,7 +321,7 @@ export default function Home() {
         },
       })
       .resizable({
-        edges: { left: true, right: true, bottom: true, top: true },
+        edges: { right: ".resize-corner", bottom: ".resize-corner" },
         modifiers: [
           interact.modifiers.restrictSize({ min: { width: 240, height: 150 } }),
         ],
