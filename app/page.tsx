@@ -57,7 +57,6 @@ export default function Home() {
   const [grouping, setGrouping] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [toast, setToast] = useState("");
-  const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -69,29 +68,19 @@ export default function Home() {
 
   useEffect(() => {
     const selector = ".widget:not(.locked)";
-    if (!editing || !canvasRef.current) { interact(selector).unset(); setGuides({}); return; }
+    if (!editing || !canvasRef.current) { interact(selector).unset(); return; }
     const grid = store.settings.grid;
-    const alignmentThreshold = 9;
     interact(selector)
-      .draggable({ allowFrom: ".drag-handle", modifiers: [interact.modifiers.snap({ targets: [interact.snappers.grid({ x: grid, y: grid })], range: Infinity })], listeners: {
+      .draggable({ allowFrom: ".drag-handle", listeners: {
         start() { document.body.classList.add("is-dragging"); },
         move(e) {
-          const id = e.target.dataset.id; const w = store.widgets.find(v => v.id === id); if (!w) return;
-          let nextX = w.layout.x + e.dx; let nextY = Math.max(0, w.layout.y + e.dy);
-          let guideX: number | undefined; let guideY: number | undefined;
-          let bestX = alignmentThreshold + 1; let bestY = alignmentThreshold + 1;
-          for (const other of store.widgets) {
-            if (other.id === id) continue;
-            const targetsX = [other.layout.x, other.layout.x + other.layout.width / 2, other.layout.x + other.layout.width];
-            const targetsY = [other.layout.y, other.layout.y + other.layout.height / 2, other.layout.y + other.layout.height];
-            const movingX = [nextX, nextX + w.layout.width / 2, nextX + w.layout.width];
-            const movingY = [nextY, nextY + w.layout.height / 2, nextY + w.layout.height];
-            for (const target of targetsX) for (const moving of movingX) { const distance = Math.abs(target - moving); if (distance <= alignmentThreshold && distance < bestX) { nextX += target - moving; bestX = distance; guideX = target; } }
-            for (const target of targetsY) for (const moving of movingY) { const distance = Math.abs(target - moving); if (distance <= alignmentThreshold && distance < bestY) { nextY += target - moving; bestY = distance; guideY = target; } }
-          }
-          setGuides({ x: guideX, y: guideY }); updateLayout(id, { x: nextX, y: Math.max(0, nextY) });
+          const target = e.target as HTMLElement;
+          const nextX = Number(target.dataset.x || 0) + e.dx;
+          const nextY = Math.max(0, Number(target.dataset.y || 0) + e.dy);
+          target.style.transform = `translate(${nextX}px, ${nextY}px)`;
+          target.dataset.x = String(nextX); target.dataset.y = String(nextY);
         },
-        end() { document.body.classList.remove("is-dragging"); setGuides({}); },
+        end(e) { const target = e.target as HTMLElement; updateLayout(target.dataset.id || "", { x: Number(target.dataset.x || 0), y: Number(target.dataset.y || 0) }); document.body.classList.remove("is-dragging"); },
       } })
       .resizable({ edges: { left: false, right: true, bottom: true, top: false }, modifiers: [interact.modifiers.snapSize({ targets: [interact.snappers.grid({ x: grid, y: grid })] }), interact.modifiers.restrictSize({ min: { width: 240, height: 150 } })], listeners: { move(e) { updateLayout(e.target.dataset.id, { width: e.rect.width, height: e.rect.height }); } } });
     return () => { interact(selector).unset(); document.body.classList.remove("is-dragging"); };
@@ -127,10 +116,8 @@ export default function Home() {
     {grouping && <div className="selectionbar"><span>그룹화할 위젯 선택 · {selected.length}개 선택</span><button onClick={createGroup}>그룹 만들기</button><button onClick={() => {setGrouping(false);setSelected([]);}}>취소</button></div>}
     <section className="canvas-wrap"><div className="canvas-label"><span>WORKSPACE / MAIN</span><small>{editing ? "드래그 핸들과 우측 하단으로 이동·크기 조절" : "보기 모드 · 콘텐츠를 바로 사용하세요"}</small></div>
       <div className="canvas" ref={canvasRef} style={{ height: Math.max(650, ...store.widgets.map(w => w.layout.y + w.layout.height + 80)) }}>
-        {guides.x !== undefined && <span className="alignment-guide vertical" style={{ left: guides.x }} />}
-        {guides.y !== undefined && <span className="alignment-guide horizontal" style={{ top: guides.y }} />}
         {store.groups.map(g => <div key={g.id} className="group-chip" style={{ borderColor: g.color, color: g.color }}>{g.name} <span>{store.widgets.filter(w => w.groupId === g.id).length}</span></div>)}
-        {store.widgets.map(w => <article key={w.id} data-id={w.id} className={`widget ${w.locked ? "locked" : ""} ${selected.includes(w.id) ? "selected" : ""}`} style={{ transform: `translate(${w.layout.x}px, ${w.layout.y}px)`, width: w.layout.width, height: w.layout.height, zIndex: w.layout.zIndex }} onClick={() => grouping && setSelected(s => s.includes(w.id) ? s.filter(id => id !== w.id) : [...s, w.id])}>
+        {store.widgets.map(w => <article key={w.id} data-id={w.id} data-x={w.layout.x} data-y={w.layout.y} className={`widget ${w.locked ? "locked" : ""} ${selected.includes(w.id) ? "selected" : ""}`} style={{ transform: `translate(${w.layout.x}px, ${w.layout.y}px)`, width: w.layout.width, height: w.layout.height, zIndex: w.layout.zIndex }} onClick={() => grouping && setSelected(s => s.includes(w.id) ? s.filter(id => id !== w.id) : [...s, w.id])}>
           <div className="widget-top drag-handle"><Icon type={w.type}/><span>{w.type.toUpperCase()}</span>{w.groupId && <small>{store.groups.find(g => g.id === w.groupId)?.name}</small>}<div className="widget-tools">{editing && <><button aria-label="잠금" onPointerDown={e=>e.stopPropagation()} onClick={() => update(w.id,{locked:!w.locked})}>{w.locked ? "◆" : "◇"}</button><button aria-label="복제" onPointerDown={e=>e.stopPropagation()} onClick={() => setStore(s => ({...s,widgets:[...s.widgets,{...w,id:crypto.randomUUID(),layout:{...w.layout,x:w.layout.x+20,y:w.layout.y+20}}]}))}>⧉</button><button aria-label="삭제" onPointerDown={e=>e.stopPropagation()} onClick={() => remove(w.id)}>×</button></>}</div></div>
           <div className="widget-body"><h2>{w.title}</h2>
             {w.type === "bookmark" && <><p className="url">{w.data.url}</p><a href={w.data.url} target="_blank" rel="noreferrer">OPEN RESOURCE <span>↗</span></a></>}
