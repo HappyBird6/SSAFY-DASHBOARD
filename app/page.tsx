@@ -226,6 +226,7 @@ export default function Home() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const dragIdsRef = useRef<string[]>([]);
+  const selectedRef = useRef<string[]>([]);
 
   useEffect(() => {
     localStorage.setItem(
@@ -242,6 +243,9 @@ export default function Home() {
     const id = setInterval(() => setClock(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
+  useEffect(() => {
+    selectedRef.current = selected;
+  }, [selected]);
 
   const update = (id: string, patch: Partial<Widget>) =>
     setStore((s) => ({
@@ -272,8 +276,13 @@ export default function Home() {
         listeners: {
           start(e) {
             const id = (e.target as HTMLElement).dataset.id || "";
-            dragIdsRef.current = selected.includes(id) ? selected : [id];
-            if (!selected.includes(id)) setSelected([id]);
+            dragIdsRef.current = selectedRef.current.includes(id)
+              ? selectedRef.current
+              : [id];
+            if (!selectedRef.current.includes(id)) {
+              selectedRef.current = [id];
+              setSelected([id]);
+            }
             document.body.classList.add("is-dragging");
           },
           move(e) {
@@ -356,7 +365,7 @@ export default function Home() {
       interact(selector).unset();
       document.body.classList.remove("is-dragging");
     };
-  }, [settingsOpen, store.settings.grid, store.widgets, selected]);
+  }, [settingsOpen, store.settings.grid, store.widgets]);
 
   const visibleWidgets = useMemo(
     () =>
