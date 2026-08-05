@@ -118,6 +118,29 @@ main[data-theme="blue"] .todo-footer {
 .widget-color-settings label {
   background: var(--surface-subtle) !important;
 }
+.data-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 14px;
+  max-width: 760px;
+  margin-top: 22px;
+}
+.data-actions article {
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
+  padding: 20px;
+}
+.data-actions p {
+  min-height: 42px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.data-actions button {
+  border: 1px solid var(--line);
+  background: var(--control-bg);
+  color: var(--cyan);
+  padding: 10px 14px;
+}
 .workspace-tabs button.active {
   background: var(--active-bg) !important;
 }
@@ -202,6 +225,9 @@ main[data-theme="blue"] .todo-footer {
   background: #8fc9df;
 }
 @media (max-width: 800px) {
+  .data-actions {
+    grid-template-columns: 1fr;
+  }
   .size-preset-list > div {
     grid-template-columns: 44px 1fr;
   }
