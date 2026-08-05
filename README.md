@@ -1,21 +1,27 @@
 # SSAFY DASHBOARD
 
-SSAFY ?숈뒿 留곹겕, 硫붾え, ???쇱쓣 寃⑹옄??罹붾쾭?ㅼ뿉??愿由ы븯??媛쒖씤??媛쒕컻 ?뚰겕?ㅽ럹?댁뒪?낅땲??
+SSAFY 학습 링크, 메모, 할 일을 격자형 캔버스에서 관리하는 개인용 개발 워크스페이스입니다.
 
-## 二쇱슂 湲곕뒫
+## 주요 기능
 
-- 遺곷쭏?? 硫붾え, ?????꾩젽 CRUD
-- interact.js 湲곕컲 ?쒕옒洹? 由ъ궗?댁쫰, 20px 寃⑹옄 ?ㅻ깄
-- ?꾩젽 洹몃９怨??좉툑
-- LocalStorage ?먮룞 ???- Zod 寃利앹쓣 ?ы븿??JSON 諛깆뾽 諛?蹂듭썝
-- GitHub Pages ?먮룞 諛고룷
+- 북마크, 메모, 할 일 위젯 생성·수정·삭제
+- interact.js 기반 드래그, 크기 조절, 20px 격자 스냅
+- 위젯 그룹과 잠금
+- LocalStorage 자동 저장
+- Zod 검증을 포함한 JSON 백업 및 복원
+- GitHub Pages 자동 배포
 
-## ?ㅽ뻾
+## 실행 방법
 
 ```bash
 npm install
 npm run dev
 ```
 
-寃利앹? `npm run lint`, `npm test`, `npm run build` ?쒖꽌濡??ㅽ뻾?⑸땲??
+## 검증
 
+```bash
+npm run lint
+npm test
+npm run build
+```
