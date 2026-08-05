@@ -57,6 +57,7 @@ export default function Home() {
   const [grouping, setGrouping] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [toast, setToast] = useState("");
+  const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -67,12 +68,33 @@ export default function Home() {
   const updateLayout = (id: string, layout: Partial<Layout>) => setStore(s => ({ ...s, widgets: s.widgets.map(w => w.id === id ? { ...w, layout: { ...w.layout, ...layout }, updatedAt: now() } : w) }));
 
   useEffect(() => {
-    if (!editing || !canvasRef.current) return;
+    const selector = ".widget:not(.locked)";
+    if (!editing || !canvasRef.current) { interact(selector).unset(); setGuides({}); return; }
     const grid = store.settings.grid;
-    interact(".widget:not(.locked)")
-      .draggable({ allowFrom: ".drag-handle", modifiers: [interact.modifiers.snap({ targets: [interact.snappers.grid({ x: grid, y: grid })], range: Infinity })], listeners: { move(e) { const id = e.target.dataset.id; const w = store.widgets.find(v => v.id === id); if (w) updateLayout(id, { x: w.layout.x + e.dx, y: Math.max(0, w.layout.y + e.dy) }); } } })
+    const alignmentThreshold = 9;
+    interact(selector)
+      .draggable({ allowFrom: ".drag-handle", modifiers: [interact.modifiers.snap({ targets: [interact.snappers.grid({ x: grid, y: grid })], range: Infinity })], listeners: {
+        start() { document.body.classList.add("is-dragging"); },
+        move(e) {
+          const id = e.target.dataset.id; const w = store.widgets.find(v => v.id === id); if (!w) return;
+          let nextX = w.layout.x + e.dx; let nextY = Math.max(0, w.layout.y + e.dy);
+          let guideX: number | undefined; let guideY: number | undefined;
+          let bestX = alignmentThreshold + 1; let bestY = alignmentThreshold + 1;
+          for (const other of store.widgets) {
+            if (other.id === id) continue;
+            const targetsX = [other.layout.x, other.layout.x + other.layout.width / 2, other.layout.x + other.layout.width];
+            const targetsY = [other.layout.y, other.layout.y + other.layout.height / 2, other.layout.y + other.layout.height];
+            const movingX = [nextX, nextX + w.layout.width / 2, nextX + w.layout.width];
+            const movingY = [nextY, nextY + w.layout.height / 2, nextY + w.layout.height];
+            for (const target of targetsX) for (const moving of movingX) { const distance = Math.abs(target - moving); if (distance <= alignmentThreshold && distance < bestX) { nextX += target - moving; bestX = distance; guideX = target; } }
+            for (const target of targetsY) for (const moving of movingY) { const distance = Math.abs(target - moving); if (distance <= alignmentThreshold && distance < bestY) { nextY += target - moving; bestY = distance; guideY = target; } }
+          }
+          setGuides({ x: guideX, y: guideY }); updateLayout(id, { x: nextX, y: Math.max(0, nextY) });
+        },
+        end() { document.body.classList.remove("is-dragging"); setGuides({}); },
+      } })
       .resizable({ edges: { left: false, right: true, bottom: true, top: false }, modifiers: [interact.modifiers.snapSize({ targets: [interact.snappers.grid({ x: grid, y: grid })] }), interact.modifiers.restrictSize({ min: { width: 240, height: 150 } })], listeners: { move(e) { updateLayout(e.target.dataset.id, { width: e.rect.width, height: e.rect.height }); } } });
-    return () => interact(".widget").unset();
+    return () => { interact(selector).unset(); document.body.classList.remove("is-dragging"); };
   }, [editing, store.settings.grid, store.widgets]);
 
   const counts = useMemo(() => ({ todo: store.widgets.filter(w => w.type === "todo" && !w.data.done).length, bookmark: store.widgets.filter(w => w.type === "bookmark").length, group: store.groups.length }), [store]);
@@ -105,6 +127,8 @@ export default function Home() {
     {grouping && <div className="selectionbar"><span>그룹화할 위젯 선택 · {selected.length}개 선택</span><button onClick={createGroup}>그룹 만들기</button><button onClick={() => {setGrouping(false);setSelected([]);}}>취소</button></div>}
     <section className="canvas-wrap"><div className="canvas-label"><span>WORKSPACE / MAIN</span><small>{editing ? "드래그 핸들과 우측 하단으로 이동·크기 조절" : "보기 모드 · 콘텐츠를 바로 사용하세요"}</small></div>
       <div className="canvas" ref={canvasRef} style={{ height: Math.max(650, ...store.widgets.map(w => w.layout.y + w.layout.height + 80)) }}>
+        {guides.x !== undefined && <span className="alignment-guide vertical" style={{ left: guides.x }} />}
+        {guides.y !== undefined && <span className="alignment-guide horizontal" style={{ top: guides.y }} />}
         {store.groups.map(g => <div key={g.id} className="group-chip" style={{ borderColor: g.color, color: g.color }}>{g.name} <span>{store.widgets.filter(w => w.groupId === g.id).length}</span></div>)}
         {store.widgets.map(w => <article key={w.id} data-id={w.id} className={`widget ${w.locked ? "locked" : ""} ${selected.includes(w.id) ? "selected" : ""}`} style={{ transform: `translate(${w.layout.x}px, ${w.layout.y}px)`, width: w.layout.width, height: w.layout.height, zIndex: w.layout.zIndex }} onClick={() => grouping && setSelected(s => s.includes(w.id) ? s.filter(id => id !== w.id) : [...s, w.id])}>
           <div className="widget-top drag-handle"><Icon type={w.type}/><span>{w.type.toUpperCase()}</span>{w.groupId && <small>{store.groups.find(g => g.id === w.groupId)?.name}</small>}<div className="widget-tools">{editing && <><button aria-label="잠금" onPointerDown={e=>e.stopPropagation()} onClick={() => update(w.id,{locked:!w.locked})}>{w.locked ? "◆" : "◇"}</button><button aria-label="복제" onPointerDown={e=>e.stopPropagation()} onClick={() => setStore(s => ({...s,widgets:[...s.widgets,{...w,id:crypto.randomUUID(),layout:{...w.layout,x:w.layout.x+20,y:w.layout.y+20}}]}))}>⧉</button><button aria-label="삭제" onPointerDown={e=>e.stopPropagation()} onClick={() => remove(w.id)}>×</button></>}</div></div>
@@ -117,7 +141,7 @@ export default function Home() {
         </article>)}
       </div>
     </section>
-    <footer><span>LOCAL STORAGE <b>ACTIVE</b></span><span>DATA STAYS ON THIS DEVICE</span><span>SSAFY DASHBOARD · V1.0</span></footer>
+    <footer><span>LOCAL STORAGE <b>ACTIVE</b></span><span>DATA STAYS ON THIS DEVICE</span><span>SSAFY DASHBOARD · V1.0.1</span></footer>
     {modal && <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && setModal(null)}><form className="modal" onSubmit={addWidget}><div><span>NEW / {modal.toUpperCase()}</span><button type="button" onClick={() => setModal(null)}>×</button></div><h2>새 {modal === "bookmark" ? "북마크" : modal === "note" ? "메모" : "할 일"}</h2><label>제목<input name="title" required autoFocus placeholder="제목을 입력하세요"/></label>{modal !== "todo" && <label>{modal === "bookmark" ? "URL" : "내용"}{modal === "note" ? <textarea name="content" rows={5} placeholder="메모를 입력하세요"/> : <input name="content" type="url" defaultValue="https://" required/>}</label>}{modal === "todo" && <><label>마감일<input name="due" type="date"/></label><label>우선순위<select name="priority"><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select></label></>}<div className="modal-actions"><button type="button" onClick={() => setModal(null)}>CANCEL</button><button type="submit">CREATE WIDGET</button></div></form></div>}
     {toast && <div className="toast" role="status">{toast}</div>}
   </main>;
