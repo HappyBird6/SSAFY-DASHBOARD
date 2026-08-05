@@ -194,11 +194,12 @@
   pointer-events: none;
 }
 .widget.selected {
-  outline: 2px solid var(--cyan) !important;
-  outline-offset: 3px;
-  box-shadow:
-    0 0 0 1px #56d6ff55,
-    0 12px 32px #0008 !important;
+  outline: 0 !important;
+  box-shadow: 0 12px 32px #0008 !important;
+}
+.widget.selected .widget-top {
+  background: #1a2b36;
+  box-shadow: inset 3px 0 var(--cyan);
 }
 .stats {
   grid-template-columns: 190px 140px 140px 140px 1fr !important;
@@ -554,8 +555,7 @@ button {
   border-color: #465767;
 }
 .widget.selected {
-  outline: 2px solid var(--purple);
-  outline-offset: 3px;
+  outline: 0;
 }
 .widget.locked {
   border-style: dashed;
@@ -626,15 +626,27 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.widget a {
+.bookmark-content {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  color: inherit !important;
+  text-decoration: none !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.bookmark-content .url {
+  font-size: 11px;
+}
+.bookmark-open {
   margin-top: auto;
   color: var(--cyan);
-  text-decoration: none;
-  border-top: 1px solid var(--line);
-  padding-top: 12px;
   font-size: 10px;
-  display: flex;
-  justify-content: space-between;
+  letter-spacing: 0.08em;
+}
+.bookmark-content:hover h2 {
+  color: var(--cyan);
 }
 .widget textarea {
   flex: 1;
@@ -665,14 +677,26 @@ button {
   text-decoration: line-through;
   color: var(--muted);
 }
-.meta {
+.todo-footer {
   margin-top: auto;
-  padding-top: 12px;
+  margin-left: -18px;
+  margin-right: -18px;
+  margin-bottom: -18px;
+  padding: 11px 14px;
   border-top: 1px solid var(--line);
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
   color: var(--muted);
   font-size: 9px;
+  background: #0a0f15;
+}
+.todo-footer .todo {
+  font-size: 9px;
+}
+.todo-due {
+  white-space: nowrap;
 }
 .priority {
   color: var(--amber);

@@ -904,47 +904,54 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="widget-body">
-                  <h2>{w.title}</h2>
-                  {w.type === "bookmark" && (
-                    <>
+                  {w.type === "bookmark" ? (
+                    <a
+                      className="bookmark-content"
+                      href={w.data.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <h2>{w.title}</h2>
                       <p className="url">{w.data.url}</p>
-                      <a href={w.data.url} target="_blank" rel="noreferrer">
-                        OPEN RESOURCE <span>↗</span>
-                      </a>
+                      <span className="bookmark-open">OPEN RESOURCE ↗</span>
+                    </a>
+                  ) : (
+                    <>
+                      <h2>{w.title}</h2>
+                      {w.type === "note" && (
+                        <textarea
+                          aria-label={`${w.title} 내용`}
+                          value={w.data.body || ""}
+                          readOnly
+                        />
+                      )}
+                      {w.type === "todo" && (
+                        <div className="todo-footer">
+                          <label className="todo">
+                            <input
+                              type="checkbox"
+                              checked={!!w.data.done}
+                              onChange={(e) =>
+                                update(w.id, {
+                                  data: { ...w.data, done: e.target.checked },
+                                })
+                              }
+                            />
+                            <span className={w.data.done ? "done" : ""}>
+                              {w.data.done ? "COMPLETED" : "IN PROGRESS"}
+                            </span>
+                          </label>
+                          <span className="todo-due">
+                            {w.data.due || "NO DEADLINE"}
+                          </span>
+                          <span
+                            className={`priority ${w.data.priority?.toLowerCase()}`}
+                          >
+                            {w.data.priority}
+                          </span>
+                        </div>
+                      )}
                     </>
-                  )}
-                  {w.type === "note" && (
-                    <textarea
-                      aria-label={`${w.title} 내용`}
-                      value={w.data.body || ""}
-                      readOnly
-                    />
-                  )}
-                  {w.type === "todo" && (
-                    <label className="todo">
-                      <input
-                        type="checkbox"
-                        checked={!!w.data.done}
-                        onChange={(e) =>
-                          update(w.id, {
-                            data: { ...w.data, done: e.target.checked },
-                          })
-                        }
-                      />
-                      <span className={w.data.done ? "done" : ""}>
-                        {w.data.done ? "COMPLETED" : "IN PROGRESS"}
-                      </span>
-                    </label>
-                  )}
-                  {w.type === "todo" && (
-                    <div className="meta">
-                      <span
-                        className={`priority ${w.data.priority?.toLowerCase()}`}
-                      >
-                        {w.data.priority}
-                      </span>
-                      <span>{w.data.due || "NO DEADLINE"}</span>
-                    </div>
                   )}
                 </div>
                 <span className="resize-corner" />
@@ -1028,7 +1035,11 @@ export default function Home() {
                   <input
                     name="due"
                     type="date"
-                    defaultValue={modalWidget?.data.due}
+                    defaultValue={
+                      modalWidget?.data.due ||
+                      new Date().toISOString().slice(0, 10)
+                    }
+                    onClick={(e) => e.currentTarget.showPicker?.()}
                   />
                 </label>
                 <label>
