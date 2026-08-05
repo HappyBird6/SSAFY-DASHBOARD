@@ -32,6 +32,8 @@ type Widget = {
   updatedAt: string;
 };
 type Workspace = { id: string; name: string };
+type SizePreset = { id: string; name: string; width: number; height: number };
+type Theme = "dark" | "light" | "blue";
 type Store = {
   version: 2;
   exportedAt: string;
@@ -39,6 +41,8 @@ type Store = {
     grid: number;
     message: string;
     widgetColors: Record<Kind, string>;
+    sizePresets: SizePreset[];
+    theme: Theme;
   };
   workspaces: Workspace[];
   activeWorkspaceId: string;
@@ -54,6 +58,17 @@ const backupSchema = z.object({
     widgetColors: z
       .object({ bookmark: z.string(), note: z.string(), todo: z.string() })
       .optional(),
+    sizePresets: z
+      .array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          width: z.number(),
+          height: z.number(),
+        }),
+      )
+      .optional(),
+    theme: z.enum(["dark", "light", "blue"]).optional(),
   }),
   workspaces: z
     .array(z.object({ id: z.string(), name: z.string() }))
@@ -105,6 +120,9 @@ const DEFAULT_WIDGET_COLORS: Record<Kind, string> = {
   note: "#6d28d9",
   todo: "#f4f7fb",
 };
+const DEFAULT_SIZE_PRESETS: SizePreset[] = [
+  { id: "size-default", name: "기본", width: 300, height: 200 },
+];
 const make = (
   type: Kind,
   title: string,
@@ -137,6 +155,8 @@ const initial: Store = {
     grid: 20,
     message: "꾸준함이 결국 실력을 만든다.",
     widgetColors: DEFAULT_WIDGET_COLORS,
+    sizePresets: DEFAULT_SIZE_PRESETS,
+    theme: "dark",
   },
   workspaces: [{ id: MAIN_WORKSPACE, name: "MAIN" }],
   activeWorkspaceId: MAIN_WORKSPACE,
@@ -167,6 +187,9 @@ const normalizeStore = (value: unknown): Store => {
     ? parsed.activeWorkspaceId!
     : workspaces[0].id;
   const widgetColors = parsed.settings.widgetColors || DEFAULT_WIDGET_COLORS;
+  const sizePresets = parsed.settings.sizePresets?.length
+    ? parsed.settings.sizePresets
+    : DEFAULT_SIZE_PRESETS;
   return {
     version: 2,
     exportedAt: parsed.exportedAt,
@@ -174,6 +197,8 @@ const normalizeStore = (value: unknown): Store => {
       grid: parsed.settings.grid,
       message: parsed.settings.message || "꾸준함이 결국 실력을 만든다.",
       widgetColors,
+      sizePresets,
+      theme: parsed.settings.theme || "dark",
     },
     workspaces,
     activeWorkspaceId,
@@ -221,7 +246,7 @@ export default function Home() {
   const [clock, setClock] = useState(new Date());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSection, setSettingsSection] = useState<
-    "workspaces" | "widgets"
+    "workspaces" | "widgets" | "sizes" | "theme"
   >("workspaces");
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -389,6 +414,7 @@ export default function Home() {
     const type = modal!.type;
     const title = String(form.get("title") || "새 위젯");
     const borderColor = String(form.get("borderColor") || "#303b47");
+    const presetId = String(form.get("sizePreset") || "size-default");
     const data =
       type === "bookmark"
         ? { url: String(form.get("content") || "https://") }
@@ -400,38 +426,66 @@ export default function Home() {
               priority: String(form.get("priority") || "MEDIUM"),
             };
     if (modal?.widgetId) {
-      setStore((s) => ({
-        ...s,
-        widgets: s.widgets.map((w) =>
-          w.id === modal.widgetId
-            ? { ...w, title, data, style: { borderColor }, updatedAt: now() }
-            : w,
-        ),
-      }));
+      setStore((s) => {
+        const preset =
+          s.settings.sizePresets.find((p) => p.id === presetId) ||
+          s.settings.sizePresets[0];
+        return {
+          ...s,
+          widgets: s.widgets.map((w) =>
+            w.id === modal.widgetId
+              ? {
+                  ...w,
+                  title,
+                  data,
+                  style: { borderColor },
+                  layout: {
+                    ...w.layout,
+                    width: preset.width,
+                    height: preset.height,
+                  },
+                  updatedAt: now(),
+                }
+              : w,
+          ),
+        };
+      });
       setToast("위젯을 수정했습니다.");
     } else {
-      setStore((s) => ({
-        ...s,
-        widgets: [
-          ...s.widgets,
-          {
-            ...make(
-              type,
-              title,
-              80 + (visibleWidgets.length % 4) * 40,
-              80 + (visibleWidgets.length % 5) * 40,
-              data,
-            ),
-            workspaceId: s.activeWorkspaceId,
-            style: {
-              borderColor:
-                borderColor === "#303b47"
-                  ? s.settings.widgetColors[type]
-                  : borderColor,
+      setStore((s) => {
+        const preset =
+          s.settings.sizePresets.find((p) => p.id === presetId) ||
+          s.settings.sizePresets[0];
+        return {
+          ...s,
+          widgets: [
+            ...s.widgets,
+            {
+              ...make(
+                type,
+                title,
+                80 + (visibleWidgets.length % 4) * 40,
+                80 + (visibleWidgets.length % 5) * 40,
+                data,
+              ),
+              workspaceId: s.activeWorkspaceId,
+              style: {
+                borderColor:
+                  borderColor === "#303b47"
+                    ? s.settings.widgetColors[type]
+                    : borderColor,
+              },
+              layout: {
+                ...make(type, title, 0, 0, data).layout,
+                x: 80 + (visibleWidgets.length % 4) * 40,
+                y: 80 + (visibleWidgets.length % 5) * 40,
+                width: preset.width,
+                height: preset.height,
+              },
             },
-          },
-        ],
-      }));
+          ],
+        };
+      });
       setToast("위젯을 추가했습니다.");
     }
     setModal(null);
@@ -503,7 +557,7 @@ export default function Home() {
   };
 
   return (
-    <main>
+    <main data-theme={store.settings.theme}>
       <header className="topbar">
         <div className="brand">
           <span className="prompt">&gt;_</span>
@@ -641,6 +695,18 @@ export default function Home() {
               >
                 위젯 스타일
               </button>
+              <button
+                className={settingsSection === "sizes" ? "active" : ""}
+                onClick={() => setSettingsSection("sizes")}
+              >
+                위젯 크기
+              </button>
+              <button
+                className={settingsSection === "theme" ? "active" : ""}
+                onClick={() => setSettingsSection("theme")}
+              >
+                페이지 테마
+              </button>
               <button disabled>데이터 관리</button>
             </aside>
             <section>
@@ -741,7 +807,7 @@ export default function Home() {
                     ))}
                   </div>
                 </>
-              ) : (
+              ) : settingsSection === "widgets" ? (
                 <>
                   <div className="settings-heading">
                     <div>
@@ -801,6 +867,147 @@ export default function Home() {
                           기존 위젯에도 적용
                         </button>
                       </label>
+                    ))}
+                  </div>
+                </>
+              ) : settingsSection === "sizes" ? (
+                <>
+                  <div className="settings-heading">
+                    <div>
+                      <small>LAYOUT</small>
+                      <h2>위젯 크기 프리셋</h2>
+                      <p>위젯 생성과 수정 시 선택할 크기를 관리합니다.</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const name = prompt("프리셋 이름", "새 크기");
+                        if (!name) return;
+                        const width = Number(prompt("너비(px)", "300"));
+                        const height = Number(prompt("높이(px)", "200"));
+                        if (
+                          !Number.isFinite(width) ||
+                          !Number.isFinite(height) ||
+                          width < 240 ||
+                          height < 150
+                        )
+                          return setToast("최소 크기는 240×150입니다.");
+                        setStore((s) => ({
+                          ...s,
+                          settings: {
+                            ...s.settings,
+                            sizePresets: [
+                              ...s.settings.sizePresets,
+                              { id: crypto.randomUUID(), name, width, height },
+                            ],
+                          },
+                        }));
+                      }}
+                    >
+                      ＋ 프리셋 추가
+                    </button>
+                  </div>
+                  <div className="size-preset-list">
+                    {store.settings.sizePresets.map((preset) => (
+                      <div key={preset.id}>
+                        <span
+                          className="size-preview"
+                          style={{
+                            aspectRatio: `${preset.width}/${preset.height}`,
+                          }}
+                        />
+                        <strong>{preset.name}</strong>
+                        <code>
+                          {preset.width} × {preset.height}
+                        </code>
+                        <button
+                          onClick={() => {
+                            const name = prompt("프리셋 이름", preset.name);
+                            if (!name) return;
+                            const width = Number(
+                              prompt("너비(px)", String(preset.width)),
+                            );
+                            const height = Number(
+                              prompt("높이(px)", String(preset.height)),
+                            );
+                            if (
+                              !Number.isFinite(width) ||
+                              !Number.isFinite(height) ||
+                              width < 240 ||
+                              height < 150
+                            )
+                              return setToast("최소 크기는 240×150입니다.");
+                            setStore((s) => ({
+                              ...s,
+                              settings: {
+                                ...s.settings,
+                                sizePresets: s.settings.sizePresets.map((p) =>
+                                  p.id === preset.id
+                                    ? { ...p, name, width, height }
+                                    : p,
+                                ),
+                              },
+                            }));
+                          }}
+                        >
+                          수정
+                        </button>
+                        <button
+                          className="danger"
+                          disabled={store.settings.sizePresets.length === 1}
+                          onClick={() =>
+                            setStore((s) => ({
+                              ...s,
+                              settings: {
+                                ...s.settings,
+                                sizePresets: s.settings.sizePresets.filter(
+                                  (p) => p.id !== preset.id,
+                                ),
+                              },
+                            }))
+                          }
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="settings-heading">
+                    <div>
+                      <small>APPEARANCE</small>
+                      <h2>페이지 테마</h2>
+                      <p>대시보드 전체의 색상 테마를 선택합니다.</p>
+                    </div>
+                  </div>
+                  <div className="theme-options">
+                    {(["dark", "light", "blue"] as Theme[]).map((theme) => (
+                      <button
+                        key={theme}
+                        className={
+                          store.settings.theme === theme ? "active" : ""
+                        }
+                        onClick={() =>
+                          setStore((s) => ({
+                            ...s,
+                            settings: { ...s.settings, theme },
+                          }))
+                        }
+                      >
+                        <span className={`theme-swatch ${theme}`}>
+                          <i />
+                          <i />
+                          <i />
+                        </span>
+                        <strong>
+                          {theme === "dark"
+                            ? "다크"
+                            : theme === "light"
+                              ? "화이트"
+                              : "파스텔 블루"}
+                        </strong>
+                      </button>
                     ))}
                   </div>
                 </>
@@ -995,6 +1202,26 @@ export default function Home() {
                 defaultValue={modalWidget?.title}
                 placeholder="제목을 입력하세요"
               />
+            </label>
+            <label>
+              위젯 크기
+              <select
+                name="sizePreset"
+                defaultValue={
+                  store.settings.sizePresets.find(
+                    (p) =>
+                      modalWidget &&
+                      p.width === modalWidget.layout.width &&
+                      p.height === modalWidget.layout.height,
+                  )?.id || store.settings.sizePresets[0].id
+                }
+              >
+                {store.settings.sizePresets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.name} · {preset.width}×{preset.height}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               테두리 색상

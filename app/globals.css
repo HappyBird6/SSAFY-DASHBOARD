@@ -1,4 +1,179 @@
 @import "tailwindcss";
+main {
+  min-height: 100vh;
+  background: var(--bg);
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+main[data-theme="light"] {
+  --bg: #f4f6f8;
+  --panel: #fff;
+  --line: #cbd3dc;
+  --muted: #657384;
+  --text: #18212b;
+  --cyan: #168ac0;
+  --green: #12866c;
+  --amber: #b96900;
+  --purple: #6d49b8;
+  background-image: radial-gradient(
+    circle at 50% -20%,
+    #dbe8f1 0,
+    transparent 38%
+  );
+}
+main[data-theme="blue"] {
+  --bg: #dff2fb;
+  --panel: #eef9fe;
+  --line: #a8cfdf;
+  --muted: #57798a;
+  --text: #173746;
+  --cyan: #168fbd;
+  --green: #268f7a;
+  --amber: #b66b22;
+  --purple: #7356b6;
+  background-image: radial-gradient(
+    circle at 50% -20%,
+    #b7e4f6 0,
+    transparent 42%
+  );
+}
+main[data-theme="light"] .topbar,
+main[data-theme="blue"] .topbar {
+  background: #f7fbfddd;
+}
+main[data-theme="blue"] .topbar {
+  background: #dff2fbe8;
+}
+main[data-theme="light"] .widget,
+main[data-theme="light"] .stats,
+main[data-theme="light"] .canvas-wrap,
+main[data-theme="light"] .settings-space,
+main[data-theme="light"] .modal,
+main[data-theme="blue"] .widget,
+main[data-theme="blue"] .stats,
+main[data-theme="blue"] .canvas-wrap,
+main[data-theme="blue"] .settings-space,
+main[data-theme="blue"] .modal {
+  background: var(--panel);
+  color: var(--text);
+}
+main[data-theme="light"] .canvas,
+main[data-theme="blue"] .canvas {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+}
+main[data-theme="light"] .widget textarea,
+main[data-theme="light"] .modal input,
+main[data-theme="light"] .modal textarea,
+main[data-theme="light"] .modal select,
+main[data-theme="blue"] .widget textarea,
+main[data-theme="blue"] .modal input,
+main[data-theme="blue"] .modal textarea,
+main[data-theme="blue"] .modal select {
+  background: #ffffffaa;
+  color: var(--text);
+}
+main[data-theme="light"] .todo-footer,
+main[data-theme="blue"] .todo-footer {
+  background: #ffffff66;
+}
+.size-preset-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 22px;
+  max-width: 760px;
+}
+.size-preset-list > div {
+  display: grid;
+  grid-template-columns: 52px 1fr 120px auto auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  padding: 12px;
+  background: #0e141c;
+}
+.size-preview {
+  display: block;
+  width: 44px;
+  max-height: 38px;
+  border: 2px solid var(--cyan);
+  background: #56d6ff18;
+}
+.size-preset-list button {
+  border: 1px solid var(--line);
+  background: #121a23;
+  color: var(--text);
+  padding: 8px 10px;
+}
+.size-preset-list button:disabled {
+  opacity: 0.3;
+}
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 220px));
+  gap: 14px;
+  margin-top: 22px;
+}
+.theme-options > button {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  padding: 12px;
+  text-align: left;
+}
+.theme-options > button.active {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 1px var(--cyan);
+}
+.theme-swatch {
+  height: 92px;
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.theme-swatch i {
+  display: block;
+  width: 26%;
+  height: 34px;
+  border-radius: 2px;
+}
+.theme-swatch.dark {
+  background: #080b10;
+}
+.theme-swatch.dark i {
+  background: #27303b;
+}
+.theme-swatch.light {
+  background: #f4f6f8;
+}
+.theme-swatch.light i {
+  background: #cbd3dc;
+}
+.theme-swatch.blue {
+  background: #dff2fb;
+}
+.theme-swatch.blue i {
+  background: #8fc9df;
+}
+@media (max-width: 800px) {
+  .size-preset-list > div {
+    grid-template-columns: 44px 1fr;
+  }
+  .theme-options {
+    grid-template-columns: 1fr;
+  }
+  .size-preset-list code {
+    grid-column: 2;
+  }
+  .size-preset-list button {
+    grid-column: auto;
+  }
+}
 .canvas-label {
   padding-left: 0 !important;
 }
