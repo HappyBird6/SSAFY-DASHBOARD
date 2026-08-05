@@ -832,6 +832,122 @@ button {
 .kind-todo {
   color: var(--green);
 }
+.kind-weather {
+  color: var(--cyan);
+}
+.kind-calendar {
+  color: var(--amber);
+}
+.api-state {
+  color: var(--muted);
+  font-size: 11px;
+}
+.weather-content {
+  display: grid;
+  gap: 14px;
+}
+.weather-main {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+.weather-icon {
+  font-size: 34px;
+}
+.weather-main strong,
+.weather-main small {
+  display: block;
+}
+.weather-main small,
+.api-updated {
+  color: var(--muted);
+  font-size: 9px;
+}
+.weather-main > b {
+  color: var(--cyan);
+  font-size: 34px;
+  font-weight: 500;
+}
+.weather-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
+}
+.weather-grid span {
+  padding: 9px 5px;
+  color: var(--muted);
+  font-size: 9px;
+  text-align: center;
+  border-right: 1px solid var(--line);
+}
+.weather-grid span:last-child {
+  border-right: 0;
+}
+.weather-grid b {
+  display: block;
+  margin-top: 3px;
+  color: var(--text);
+  font-size: 13px;
+}
+.calendar-content {
+  display: grid;
+  gap: 7px;
+}
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.calendar-nav button {
+  border: 1px solid var(--line);
+  background: var(--control-bg);
+  color: var(--text);
+  width: 28px;
+  height: 26px;
+}
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.calendar-grid span {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 23px;
+  color: var(--text);
+  font-size: 10px;
+}
+.calendar-weekdays span {
+  color: var(--muted);
+  font-size: 8px;
+}
+.calendar-grid span:nth-child(7n + 1),
+.calendar-grid span.holiday {
+  color: #ef6b6b;
+}
+.calendar-grid span.holiday i {
+  position: absolute;
+  bottom: 1px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #ef6b6b;
+}
+.holiday-list {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  color: var(--muted);
+}
+.holiday-list small {
+  white-space: nowrap;
+}
+.holiday-list b {
+  color: #ef6b6b;
+}
 .widget-top small {
   border-left: 1px solid var(--line);
   padding-left: 8px;
