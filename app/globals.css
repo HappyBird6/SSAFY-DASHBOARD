@@ -902,6 +902,9 @@ button {
 .kind-todo {
   color: var(--green);
 }
+.kind-todolist {
+  color: #6ee7b7;
+}
 .kind-weather {
   color: var(--cyan);
 }
@@ -1292,6 +1295,73 @@ button {
 }
 .todo-footer .todo {
   font-size: 9px;
+}
+.todolist-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.todolist-sort {
+  display: flex;
+  gap: 6px;
+}
+.todolist-sort button {
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  background: var(--control-bg);
+  color: var(--muted);
+  font-size: 9px;
+}
+.todolist-sort button.active {
+  border-color: var(--green);
+  color: var(--green);
+  background: var(--active-bg);
+}
+.todolist-items {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+.todolist-items > label {
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: auto minmax(90px, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
+  font-size: 10px;
+  cursor: pointer;
+}
+.todolist-items input {
+  accent-color: var(--green);
+}
+.todolist-items strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+.todolist-items time {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.todolist-items .completed strong,
+.todolist-items .completed time,
+.todolist-items .completed .priority {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+.todolist-items > p {
+  margin: auto;
+  color: var(--muted);
+  font-size: 11px;
 }
 .todo-due {
   white-space: nowrap;

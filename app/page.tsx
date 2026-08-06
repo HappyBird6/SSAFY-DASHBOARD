@@ -8,6 +8,7 @@ type Kind =
   | "bookmark"
   | "note"
   | "todo"
+  | "todolist"
   | "weather"
   | "calendar"
   | "timer"
@@ -37,6 +38,7 @@ type Widget = {
     done?: boolean;
     due?: string;
     priority?: string;
+    todolistSort?: "priority" | "date";
     city?: string;
     locationName?: string;
     latitude?: number;
@@ -82,6 +84,7 @@ const backupSchema = z.object({
         bookmark: z.string(),
         note: z.string(),
         todo: z.string(),
+        todolist: z.string().optional(),
         weather: z.string().optional(),
         calendar: z.string().optional(),
         timer: z.string().optional(),
@@ -122,6 +125,7 @@ const backupSchema = z.object({
         "bookmark",
         "note",
         "todo",
+        "todolist",
         "weather",
         "calendar",
         "timer",
@@ -152,6 +156,7 @@ const backupSchema = z.object({
         done: z.boolean().optional(),
         due: z.string().optional(),
         priority: z.string().optional(),
+        todolistSort: z.enum(["priority", "date"]).optional(),
         city: z.string().optional(),
         locationName: z.string().optional(),
         latitude: z.number().optional(),
@@ -177,6 +182,7 @@ const DEFAULT_WIDGET_COLORS: Record<Kind, string> = {
   bookmark: "#38bdf8",
   note: "#6d28d9",
   todo: "#f4f7fb",
+  todolist: "#a7f3d0",
   weather: "#38bdf8",
   calendar: "#f59e0b",
   timer: "#22c55e",
@@ -296,6 +302,8 @@ function Icon({ type }: { type: Kind }) {
           ? "≡"
           : type === "todo"
             ? "✓"
+            : type === "todolist"
+              ? "≣"
             : type === "weather"
               ? "☁"
               : type === "calendar"
@@ -748,6 +756,70 @@ function CountdownWidget({ widget }: { widget: Widget }) {
   );
 }
 
+function TodoListWidget({
+  widget,
+  todos,
+  onSort,
+  onToggle,
+}: {
+  widget: Widget;
+  todos: Widget[];
+  onSort: (sort: "priority" | "date") => void;
+  onToggle: (todo: Widget, done: boolean) => void;
+}) {
+  const sort = widget.data.todolistSort || "priority";
+  const priorityRank: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+  const sorted = [...todos].sort((a, b) => {
+    if (sort === "priority") {
+      const priority =
+        (priorityRank[a.data.priority || "MEDIUM"] ?? 1) -
+        (priorityRank[b.data.priority || "MEDIUM"] ?? 1);
+      if (priority !== 0) return priority;
+    }
+    return (a.data.due || "9999-12-31").localeCompare(
+      b.data.due || "9999-12-31",
+    );
+  });
+  return (
+    <div className="todolist-content">
+      <div className="todolist-sort" aria-label="TODO 정렬 방식">
+        <button
+          className={sort === "priority" ? "active" : ""}
+          onClick={() => onSort("priority")}
+        >
+          중요도순
+        </button>
+        <button
+          className={sort === "date" ? "active" : ""}
+          onClick={() => onSort("date")}
+        >
+          날짜순
+        </button>
+      </div>
+      <div className="todolist-items">
+        {sorted.length ? (
+          sorted.map((todo) => (
+            <label className={todo.data.done ? "completed" : ""} key={todo.id}>
+              <input
+                type="checkbox"
+                checked={!!todo.data.done}
+                onChange={(event) => onToggle(todo, event.target.checked)}
+              />
+              <strong>{todo.title}</strong>
+              <time>{todo.data.due || "기한 없음"}</time>
+              <span className={`priority ${todo.data.priority?.toLowerCase()}`}>
+                {todo.data.priority || "MEDIUM"}
+              </span>
+            </label>
+          ))
+        ) : (
+          <p>등록된 TODO가 없습니다.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function CountdownSizePicker({ initial }: { initial: number }) {
   const [fontSize, setFontSize] = useState(initial);
   const resize = (amount: number) =>
@@ -1055,7 +1127,9 @@ export default function Home() {
     const type = modal!.type;
     const title = String(
       form.get("title") ||
-        (type === "calendar"
+        (type === "todolist"
+          ? "TODO LIST"
+          : type === "calendar"
           ? "달력"
           : type === "timer" || type === "countdown"
             ? ""
@@ -1102,6 +1176,11 @@ export default function Home() {
                 }
               : type === "calendar"
                 ? {}
+                : type === "todolist"
+                  ? {
+                      todolistSort:
+                        modalWidget?.data.todolistSort || ("priority" as const),
+                    }
                 : type === "bookmark"
                   ? {
                       links: bookmarkLinks,
@@ -1163,6 +1242,8 @@ export default function Home() {
         const contentMinimum =
           type === "calendar"
             ? { width: 320, height: 350 }
+            : type === "todolist"
+              ? { width: 360, height: 300 }
             : type === "weather"
               ? { width: 330, height: 270 }
               : type === "bookmark"
@@ -1313,6 +1394,7 @@ export default function Home() {
                 "bookmark",
                 "note",
                 "todo",
+                "todolist",
                 "weather",
                 "calendar",
                 "timer",
@@ -1325,7 +1407,11 @@ export default function Home() {
                 style={{ color: store.settings.widgetColors[type] }}
                 onClick={() => setModal({ type })}
               >
-                {type === "launcher" ? "QUICK LAUNCH" : type.toUpperCase()}
+                {type === "launcher"
+                  ? "QUICK LAUNCH"
+                  : type === "todolist"
+                    ? "TODO LIST"
+                    : type.toUpperCase()}
               </button>
             ))}
           </div>
@@ -1513,6 +1599,7 @@ export default function Home() {
                         "bookmark",
                         "note",
                         "todo",
+                        "todolist",
                         "weather",
                         "calendar",
                         "timer",
@@ -1528,6 +1615,8 @@ export default function Home() {
                               ? "≡"
                               : type === "todo"
                                 ? "✓"
+                                : type === "todolist"
+                                  ? "≣"
                                 : type === "weather"
                                   ? "☁"
                                   : type === "calendar"
@@ -1953,6 +2042,24 @@ export default function Home() {
                           </span>
                         </div>
                       )}
+                      {w.type === "todolist" && (
+                        <TodoListWidget
+                          widget={w}
+                          todos={visibleWidgets.filter(
+                            (item) => item.type === "todo",
+                          )}
+                          onSort={(todolistSort) =>
+                            update(w.id, {
+                              data: { ...w.data, todolistSort },
+                            })
+                          }
+                          onToggle={(todo, done) =>
+                            update(todo.id, {
+                              data: { ...todo.data, done },
+                            })
+                          }
+                        />
+                      )}
                       {w.type === "weather" && <WeatherWidget widget={w} />}
                       {w.type === "calendar" && <CalendarWidget />}
                       {w.type === "timer" && (
@@ -2014,7 +2121,7 @@ export default function Home() {
             <h2>
               {modalWidget
                 ? "위젯 수정"
-                : `새 ${modal.type === "bookmark" ? "북마크" : modal.type === "note" ? "메모" : modal.type === "todo" ? "할 일" : modal.type === "weather" ? "날씨" : modal.type === "calendar" ? "달력" : modal.type === "timer" ? "학습 타이머" : modal.type === "countdown" ? "카운트다운" : "빠른 실행"}`}
+                : `새 ${modal.type === "bookmark" ? "북마크" : modal.type === "note" ? "메모" : modal.type === "todo" ? "할 일" : modal.type === "todolist" ? "TODO LIST" : modal.type === "weather" ? "날씨" : modal.type === "calendar" ? "달력" : modal.type === "timer" ? "학습 타이머" : modal.type === "countdown" ? "카운트다운" : "빠른 실행"}`}
             </h2>
             {modal.type !== "calendar" && (
               <label>
@@ -2025,7 +2132,10 @@ export default function Home() {
                     modal.type !== "timer" && modal.type !== "countdown"
                   }
                   autoFocus
-                  defaultValue={modalWidget?.title}
+                  defaultValue={
+                    modalWidget?.title ||
+                    (modal.type === "todolist" ? "TODO LIST" : "")
+                  }
                   placeholder="제목을 입력하세요"
                 />
               </label>
