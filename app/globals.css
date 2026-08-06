@@ -838,6 +838,12 @@ button {
 .kind-calendar {
   color: var(--amber);
 }
+.kind-timer {
+  color: var(--green);
+}
+.kind-countdown {
+  color: #f97316;
+}
 .api-state {
   color: var(--muted);
   font-size: 11px;
@@ -1018,7 +1024,7 @@ button {
 .bookmark-content {
   flex: 1 !important;
   display: flex !important;
-  align-items: center !important;
+  align-items: flex-start !important;
   justify-content: center !important;
   color: inherit !important;
   text-decoration: none !important;
@@ -1028,11 +1034,53 @@ button {
 }
 .bookmark-content h2 {
   margin: 0;
-  text-align: center;
+  text-align: left;
   font-size: 15px;
+}
+.widget-bookmark .widget-body {
+  padding: 8px 10px;
+  transition: background 0.15s ease;
+}
+.widget-bookmark:hover .widget-body {
+  background: #38bdf80d;
 }
 .bookmark-content:hover h2 {
   color: var(--cyan);
+}
+.study-timer,
+.countdown-content {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+}
+.study-timer > strong {
+  color: var(--green);
+  font-size: clamp(34px, 5vw, 58px);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+.study-timer > div,
+.countdown-controls {
+  display: flex;
+  gap: 7px;
+}
+.study-timer button,
+.countdown-controls button {
+  border: 1px solid var(--line);
+  background: var(--control-bg);
+  color: var(--text);
+  padding: 7px 10px;
+  font-size: 9px;
+}
+.countdown-content > strong {
+  color: #f97316;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .widget textarea {
   flex: 1;

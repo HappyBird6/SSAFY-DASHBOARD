@@ -4,7 +4,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import interact from "interactjs";
 import { z } from "zod";
 
-type Kind = "bookmark" | "note" | "todo" | "weather" | "calendar";
+type Kind =
+  | "bookmark"
+  | "note"
+  | "todo"
+  | "weather"
+  | "calendar"
+  | "timer"
+  | "countdown";
 type Layout = {
   x: number;
   y: number;
@@ -31,6 +38,12 @@ type Widget = {
     locationName?: string;
     latitude?: number;
     longitude?: number;
+    timerMinutes?: number;
+    timerRemaining?: number;
+    timerRunning?: boolean;
+    timerEndsAt?: string;
+    countdownDate?: string;
+    countdownFontSize?: number;
   };
   createdAt: string;
   updatedAt: string;
@@ -66,6 +79,8 @@ const backupSchema = z.object({
         todo: z.string(),
         weather: z.string().optional(),
         calendar: z.string().optional(),
+        timer: z.string().optional(),
+        countdown: z.string().optional(),
       })
       .optional(),
     sizePresets: z
@@ -97,7 +112,15 @@ const backupSchema = z.object({
   widgets: z.array(
     z.object({
       id: z.string(),
-      type: z.enum(["bookmark", "note", "todo", "weather", "calendar"]),
+      type: z.enum([
+        "bookmark",
+        "note",
+        "todo",
+        "weather",
+        "calendar",
+        "timer",
+        "countdown",
+      ]),
       title: z.string(),
       layout: z.object({
         x: z.number(),
@@ -120,6 +143,12 @@ const backupSchema = z.object({
         locationName: z.string().optional(),
         latitude: z.number().optional(),
         longitude: z.number().optional(),
+        timerMinutes: z.number().optional(),
+        timerRemaining: z.number().optional(),
+        timerRunning: z.boolean().optional(),
+        timerEndsAt: z.string().optional(),
+        countdownDate: z.string().optional(),
+        countdownFontSize: z.number().optional(),
       }),
       createdAt: z.string(),
       updatedAt: z.string(),
@@ -135,6 +164,8 @@ const DEFAULT_WIDGET_COLORS: Record<Kind, string> = {
   todo: "#f4f7fb",
   weather: "#38bdf8",
   calendar: "#f59e0b",
+  timer: "#22c55e",
+  countdown: "#f97316",
 };
 const DEFAULT_SIZE_PRESETS: SizePreset[] = [
   { id: "size-default", name: "기본", width: 300, height: 200 },
@@ -244,7 +275,11 @@ function Icon({ type }: { type: Kind }) {
             ? "✓"
             : type === "weather"
               ? "☁"
-              : "□"}
+              : type === "calendar"
+                ? "□"
+                : type === "timer"
+                  ? "◷"
+                  : "D"}
     </span>
   );
 }
@@ -586,6 +621,128 @@ function CalendarWidget() {
   );
 }
 
+function StudyTimer({
+  widget,
+  onData,
+}: {
+  widget: Widget;
+  onData: (data: Widget["data"]) => void;
+}) {
+  const minutes = widget.data.timerMinutes || 25;
+  const calculateRemaining = () =>
+    widget.data.timerRunning && widget.data.timerEndsAt
+      ? Math.max(
+          0,
+          Math.ceil(
+            (new Date(widget.data.timerEndsAt).getTime() - Date.now()) / 1000,
+          ),
+        )
+      : (widget.data.timerRemaining ?? minutes * 60);
+  const [remaining, setRemaining] = useState(calculateRemaining);
+
+  useEffect(() => {
+    setRemaining(calculateRemaining());
+    if (!widget.data.timerRunning || !widget.data.timerEndsAt) return;
+    const id = window.setInterval(() => {
+      const next = Math.max(
+        0,
+        Math.ceil(
+          (new Date(widget.data.timerEndsAt!).getTime() - Date.now()) / 1000,
+        ),
+      );
+      setRemaining(next);
+      if (next === 0) {
+        window.clearInterval(id);
+        onData({
+          ...widget.data,
+          timerRemaining: 0,
+          timerRunning: false,
+          timerEndsAt: undefined,
+        });
+      }
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [widget.data.timerEndsAt, widget.data.timerRunning, minutes]);
+
+  const start = () => {
+    const seconds = remaining || minutes * 60;
+    onData({
+      ...widget.data,
+      timerRemaining: seconds,
+      timerRunning: true,
+      timerEndsAt: new Date(Date.now() + seconds * 1000).toISOString(),
+    });
+  };
+  const pause = () =>
+    onData({
+      ...widget.data,
+      timerRemaining: remaining,
+      timerRunning: false,
+      timerEndsAt: undefined,
+    });
+  const reset = () => {
+    setRemaining(minutes * 60);
+    onData({
+      ...widget.data,
+      timerRemaining: minutes * 60,
+      timerRunning: false,
+      timerEndsAt: undefined,
+    });
+  };
+
+  return (
+    <div className="study-timer">
+      <strong>
+        {String(Math.floor(remaining / 60)).padStart(2, "0")}:
+        {String(remaining % 60).padStart(2, "0")}
+      </strong>
+      <div>
+        <button onClick={widget.data.timerRunning ? pause : start}>
+          {widget.data.timerRunning ? "PAUSE" : "START"}
+        </button>
+        <button onClick={reset}>RESET</button>
+      </div>
+    </div>
+  );
+}
+
+function CountdownWidget({
+  widget,
+  onData,
+}: {
+  widget: Widget;
+  onData: (data: Widget["data"]) => void;
+}) {
+  const target = widget.data.countdownDate
+    ? new Date(`${widget.data.countdownDate}T00:00:00`)
+    : new Date();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Math.ceil((target.getTime() - today.getTime()) / 86400000);
+  const text =
+    days === 0 ? "D-DAY" : days > 0 ? `D-${days}` : `D+${Math.abs(days)}`;
+  const fontSize = widget.data.countdownFontSize || 56;
+  const resizeText = (next: number) =>
+    onData({
+      ...widget.data,
+      countdownFontSize: Math.min(120, Math.max(28, next)),
+    });
+
+  return (
+    <div className="countdown-content">
+      <strong style={{ fontSize }}>{text}</strong>
+      <div className="countdown-controls">
+        <button aria-label="글자 작게" onClick={() => resizeText(fontSize - 4)}>
+          A−
+        </button>
+        <button aria-label="글자 크게" onClick={() => resizeText(fontSize + 4)}>
+          A＋
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [store, setStore] = useState<Store>(() => {
     if (typeof window === "undefined") return initial;
@@ -786,23 +943,34 @@ export default function Home() {
     const presetId = String(form.get("sizePreset") || "");
     const workspaceId = String(form.get("workspaceId") || "");
     const data =
-      type === "weather"
+      type === "timer"
         ? {
-            locationName: String(form.get("locationName") || "서울"),
-            latitude: Number(form.get("latitude") || 37.5665),
-            longitude: Number(form.get("longitude") || 126.978),
+            timerMinutes: Number(form.get("timerMinutes") || 25),
+            timerRemaining: Number(form.get("timerMinutes") || 25) * 60,
+            timerRunning: false,
           }
-        : type === "calendar"
-          ? {}
-          : type === "bookmark"
-            ? { url: String(form.get("content") || "https://") }
-            : type === "note"
-              ? { body: String(form.get("content") || "") }
-              : {
-                  done: modalWidget?.data.done || false,
-                  due: String(form.get("due") || ""),
-                  priority: String(form.get("priority") || "MEDIUM"),
-                };
+        : type === "countdown"
+          ? {
+              countdownDate: String(form.get("countdownDate") || ""),
+              countdownFontSize: modalWidget?.data.countdownFontSize || 56,
+            }
+          : type === "weather"
+            ? {
+                locationName: String(form.get("locationName") || "서울"),
+                latitude: Number(form.get("latitude") || 37.5665),
+                longitude: Number(form.get("longitude") || 126.978),
+              }
+            : type === "calendar"
+              ? {}
+              : type === "bookmark"
+                ? { url: String(form.get("content") || "https://") }
+                : type === "note"
+                  ? { body: String(form.get("content") || "") }
+                  : {
+                      done: modalWidget?.data.done || false,
+                      due: String(form.get("due") || ""),
+                      priority: String(form.get("priority") || "MEDIUM"),
+                    };
     if (modal?.widgetId) {
       setStore((s) => {
         const preset = s.settings.sizePresets.find((p) => p.id === presetId);
@@ -966,6 +1134,10 @@ export default function Home() {
           </button>
           <button onClick={() => setModal({ type: "calendar" })}>
             + CALENDAR
+          </button>
+          <button onClick={() => setModal({ type: "timer" })}>+ TIMER</button>
+          <button onClick={() => setModal({ type: "countdown" })}>
+            + COUNTDOWN
           </button>
         </div>
       </section>
@@ -1201,6 +1373,8 @@ export default function Home() {
                         "todo",
                         "weather",
                         "calendar",
+                        "timer",
+                        "countdown",
                       ] as Kind[]
                     ).map((type) => (
                       <label key={type}>
@@ -1213,7 +1387,11 @@ export default function Home() {
                                 ? "✓"
                                 : type === "weather"
                                   ? "☁"
-                                  : "□"}
+                                  : type === "calendar"
+                                    ? "□"
+                                    : type === "timer"
+                                      ? "◷"
+                                      : "D"}
                         </span>
                         <strong>{type.toUpperCase()}</strong>
                         <input
@@ -1468,7 +1646,7 @@ export default function Home() {
                 data-width={w.layout.width}
                 data-height={w.layout.height}
                 data-z={w.layout.zIndex}
-                className={`widget ${selected.includes(w.id) ? "selected" : ""}`}
+                className={`widget widget-${w.type} ${selected.includes(w.id) ? "selected" : ""}`}
                 style={{
                   transform: `translate(${w.layout.x}px, ${w.layout.y}px)`,
                   width: w.layout.width,
@@ -1573,7 +1751,9 @@ export default function Home() {
                     </a>
                   ) : (
                     <>
-                      {w.type !== "calendar" && <h2>{w.title}</h2>}
+                      {w.type !== "calendar" && w.type !== "countdown" && (
+                        <h2>{w.title}</h2>
+                      )}
                       {w.type === "note" && (
                         <textarea
                           aria-label={`${w.title} 내용`}
@@ -1609,6 +1789,18 @@ export default function Home() {
                       )}
                       {w.type === "weather" && <WeatherWidget widget={w} />}
                       {w.type === "calendar" && <CalendarWidget />}
+                      {w.type === "timer" && (
+                        <StudyTimer
+                          widget={w}
+                          onData={(data) => update(w.id, { data })}
+                        />
+                      )}
+                      {w.type === "countdown" && (
+                        <CountdownWidget
+                          widget={w}
+                          onData={(data) => update(w.id, { data })}
+                        />
+                      )}
                     </>
                   )}
                 </div>
@@ -1642,7 +1834,7 @@ export default function Home() {
             <h2>
               {modalWidget
                 ? "위젯 수정"
-                : `새 ${modal.type === "bookmark" ? "북마크" : modal.type === "note" ? "메모" : modal.type === "todo" ? "할 일" : modal.type === "weather" ? "날씨" : "달력"}`}
+                : `새 ${modal.type === "bookmark" ? "북마크" : modal.type === "note" ? "메모" : modal.type === "todo" ? "할 일" : modal.type === "weather" ? "날씨" : modal.type === "calendar" ? "달력" : modal.type === "timer" ? "학습 타이머" : "카운트다운"}`}
             </h2>
             {modal.type !== "calendar" && (
               <label>
@@ -1721,6 +1913,36 @@ export default function Home() {
             )}
             {modal.type === "weather" && (
               <LocationPicker widget={modalWidget} />
+            )}
+            {modal.type === "timer" && (
+              <label>
+                학습 시간(분)
+                <input
+                  name="timerMinutes"
+                  type="number"
+                  min="1"
+                  max="180"
+                  defaultValue={modalWidget?.data.timerMinutes || 25}
+                  required
+                />
+              </label>
+            )}
+            {modal.type === "countdown" && (
+              <label>
+                목표 날짜
+                <input
+                  name="countdownDate"
+                  type="date"
+                  defaultValue={
+                    modalWidget?.data.countdownDate ||
+                    new Date(Date.now() + 30 * 86400000)
+                      .toISOString()
+                      .slice(0, 10)
+                  }
+                  onClick={(e) => e.currentTarget.showPicker?.()}
+                  required
+                />
+              </label>
             )}
             {modal.type === "todo" && (
               <>
