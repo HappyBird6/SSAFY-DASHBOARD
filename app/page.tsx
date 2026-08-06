@@ -13,6 +13,7 @@ type Kind =
   | "calendar"
   | "timer"
   | "countdown"
+  | "fish"
   | "launcher";
 type Layout = {
   x: number;
@@ -51,6 +52,7 @@ type Widget = {
     countdownFontSize?: number;
     launcherLabel?: string;
     launcherUrl?: string;
+    fishSpecies?: string;
   };
   createdAt: string;
   updatedAt: string;
@@ -90,6 +92,7 @@ const backupSchema = z.object({
         timer: z.string().optional(),
         countdown: z.string().optional(),
         launcher: z.string().optional(),
+        fish: z.string().optional(),
       })
       .optional(),
     sizePresets: z
@@ -130,6 +133,7 @@ const backupSchema = z.object({
         "calendar",
         "timer",
         "countdown",
+        "fish",
         "launcher",
         "launcher",
       ]),
@@ -169,6 +173,7 @@ const backupSchema = z.object({
         countdownFontSize: z.number().optional(),
         launcherLabel: z.string().optional(),
         launcherUrl: z.string().optional(),
+        fishSpecies: z.string().optional(),
       }),
       createdAt: z.string(),
       updatedAt: z.string(),
@@ -187,6 +192,7 @@ const DEFAULT_WIDGET_COLORS: Record<Kind, string> = {
   calendar: "#f59e0b",
   timer: "#22c55e",
   countdown: "#f97316",
+  fish: "#22d3ee",
   launcher: "#60a5fa",
 };
 const DEFAULT_SIZE_PRESETS: SizePreset[] = [
@@ -274,7 +280,7 @@ const normalizeStore = (value: unknown): Store => {
     },
     workspaces,
     activeWorkspaceId,
-    widgets: parsed.widgets.map((w) => {
+    widgets: parsed.widgets.filter((w) => w.type !== "launcher").map((w) => {
       const links =
         w.type === "bookmark" && !w.data.links?.length && w.data.url
           ? [{ id: crypto.randomUUID(), label: w.title || "LINK", url: w.data.url }]
@@ -312,6 +318,8 @@ function Icon({ type }: { type: Kind }) {
                   ? "◷"
                   : type === "countdown"
                     ? "D"
+                    : type === "fish"
+                      ? "🐠"
                     : "⚡"}
     </span>
   );
@@ -1129,6 +1137,8 @@ export default function Home() {
       form.get("title") ||
         (type === "todolist"
           ? "TODO LIST"
+          : type === "fish"
+            ? "열대어"
           : type === "calendar"
           ? "달력"
           : type === "timer" || type === "countdown"
@@ -1150,13 +1160,8 @@ export default function Home() {
       form.get("countdownFontSize") || modalWidget?.data.countdownFontSize || 56,
     );
     const data =
-      type === "launcher"
-        ? {
-            launcherLabel: String(form.get("launcherLabel") || "WEBEX"),
-            launcherUrl: String(
-              form.get("launcherUrl") || "https://www.webex.com/",
-            ),
-          }
+      type === "fish"
+        ? { fishSpecies: "tropical" }
         : type === "timer"
           ? {
               timerMinutes: Number(form.get("timerMinutes") || 25),
@@ -1244,6 +1249,8 @@ export default function Home() {
             ? { width: 320, height: 350 }
             : type === "todolist"
               ? { width: 360, height: 300 }
+              : type === "fish"
+                ? { width: 180, height: 80 }
             : type === "weather"
               ? { width: 330, height: 270 }
               : type === "bookmark"
@@ -1280,8 +1287,16 @@ export default function Home() {
                 ...make(type, title, 0, 0, data).layout,
                 x: 80 + (visibleWidgets.length % 4) * 40,
                 y: 80 + (visibleWidgets.length % 5) * 40,
-                width: Math.max(preset.width, contentMinimum.width),
-                height: Math.max(preset.height, contentMinimum.height),
+                width:
+                  type === "fish"
+                    ? contentMinimum.width
+                    : Math.max(preset.width, contentMinimum.width),
+                height:
+                  type === "fish"
+                    ? contentMinimum.height
+                    : Math.max(preset.height, contentMinimum.height),
+                zIndex:
+                  Math.max(0, ...s.widgets.map((w) => w.layout.zIndex)) + 1,
               },
             },
           ],
@@ -1399,7 +1414,7 @@ export default function Home() {
                 "calendar",
                 "timer",
                 "countdown",
-                "launcher",
+                "fish",
               ] as Kind[]
             ).map((type) => (
               <button
@@ -1407,9 +1422,7 @@ export default function Home() {
                 style={{ color: store.settings.widgetColors[type] }}
                 onClick={() => setModal({ type })}
               >
-                {type === "launcher"
-                  ? "QUICK LAUNCH"
-                  : type === "todolist"
+                {type === "todolist"
                     ? "TODO LIST"
                     : type.toUpperCase()}
               </button>
@@ -1604,7 +1617,7 @@ export default function Home() {
                         "calendar",
                         "timer",
                         "countdown",
-                        "launcher",
+                        "fish",
                       ] as Kind[]
                     ).map((type) => (
                       <label key={type}>
@@ -1625,6 +1638,8 @@ export default function Home() {
                                       ? "◷"
                                       : type === "countdown"
                                         ? "D"
+                                        : type === "fish"
+                                          ? "🐠"
                                         : "⚡"}
                         </span>
                         <strong>{type.toUpperCase()}</strong>
@@ -2001,7 +2016,7 @@ export default function Home() {
                     </>
                   ) : (
                     <>
-                      {w.type !== "calendar" && w.title && (
+                      {w.type !== "calendar" && w.type !== "fish" && w.title && (
                         <h2
                           className="widget-title"
                           style={{ borderBottomColor: w.style.borderColor }}
@@ -2071,18 +2086,11 @@ export default function Home() {
                       {w.type === "countdown" && (
                         <CountdownWidget widget={w} />
                       )}
-                      {w.type === "launcher" && (
-                        <div className="quick-launch-grid">
-                          <a
-                            href={
-                              w.data.launcherUrl || "https://www.webex.com/"
-                            }
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            <span>W</span>
-                            <strong>{w.data.launcherLabel || "WEBEX"}</strong>
-                          </a>
+                      {w.type === "fish" && (
+                        <div className="fish-content" aria-label="헤엄치는 열대어">
+                          <span role="img" aria-hidden="true">
+                            🐠
+                          </span>
                         </div>
                       )}
                     </>
@@ -2121,7 +2129,7 @@ export default function Home() {
             <h2>
               {modalWidget
                 ? "위젯 수정"
-                : `새 ${modal.type === "bookmark" ? "북마크" : modal.type === "note" ? "메모" : modal.type === "todo" ? "할 일" : modal.type === "todolist" ? "TODO LIST" : modal.type === "weather" ? "날씨" : modal.type === "calendar" ? "달력" : modal.type === "timer" ? "학습 타이머" : modal.type === "countdown" ? "카운트다운" : "빠른 실행"}`}
+                : `새 ${modal.type === "bookmark" ? "북마크" : modal.type === "note" ? "메모" : modal.type === "todo" ? "할 일" : modal.type === "todolist" ? "TODO LIST" : modal.type === "weather" ? "날씨" : modal.type === "calendar" ? "달력" : modal.type === "timer" ? "학습 타이머" : modal.type === "countdown" ? "카운트다운" : modal.type === "fish" ? "열대어" : "위젯"}`}
             </h2>
             {modal.type !== "calendar" && (
               <label>
@@ -2134,7 +2142,11 @@ export default function Home() {
                   autoFocus
                   defaultValue={
                     modalWidget?.title ||
-                    (modal.type === "todolist" ? "TODO LIST" : "")
+                    (modal.type === "todolist"
+                      ? "TODO LIST"
+                      : modal.type === "fish"
+                        ? "열대어"
+                        : "")
                   }
                   placeholder="제목을 입력하세요"
                 />
@@ -2231,29 +2243,6 @@ export default function Home() {
                 <CountdownSizePicker
                   initial={modalWidget?.data.countdownFontSize || 56}
                 />
-              </>
-            )}
-            {modal.type === "launcher" && (
-              <>
-                <label>
-                  버튼 이름
-                  <input
-                    name="launcherLabel"
-                    defaultValue={modalWidget?.data.launcherLabel || "WEBEX"}
-                    required
-                  />
-                </label>
-                <label>
-                  실행 URL
-                  <input
-                    name="launcherUrl"
-                    type="url"
-                    defaultValue={
-                      modalWidget?.data.launcherUrl || "https://www.webex.com/"
-                    }
-                    required
-                  />
-                </label>
               </>
             )}
             {modal.type === "todo" && (
