@@ -444,7 +444,7 @@ main[data-theme="blue"] .todo-footer {
   box-shadow: inset 3px 0 var(--cyan);
 }
 .stats {
-  grid-template-columns: 190px 140px 140px 140px 1fr !important;
+  grid-template-columns: 190px 1fr auto !important;
 }
 .datetime {
   padding: 18px 22px;
@@ -465,6 +465,15 @@ main[data-theme="blue"] .todo-footer {
 }
 .datetime small {
   color: var(--muted);
+}
+.stats-spacer {
+  min-width: 0;
+}
+.stats > .widget-create {
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  border-left: 1px solid var(--line);
 }
 .quote textarea {
   width: 100%;
@@ -1146,12 +1155,19 @@ button {
 }
 .widget-countdown .widget-body {
   position: relative;
-  padding-bottom: 42px;
+  padding-bottom: 54px;
 }
 .widget-countdown .countdown-controls {
   position: absolute;
-  left: 10px;
-  bottom: 8px;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 7px 10px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-subtle);
 }
 .quick-launch-grid {
   display: grid;
@@ -1270,7 +1286,9 @@ footer b {
   position: fixed;
   inset: 0;
   background: #000b;
-  z-index: 200;
+  z-index: 2147483000;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
   display: grid;
   place-items: center;
   padding: 20px;

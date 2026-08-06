@@ -719,10 +719,10 @@ function StudyTimer({
 
 function CountdownWidget({
   widget,
-  onData,
+  onFontSize,
 }: {
   widget: Widget;
-  onData: (data: Widget["data"]) => void;
+  onFontSize: (fontSize: number) => void;
 }) {
   const target = widget.data.countdownDate
     ? new Date(`${widget.data.countdownDate}T00:00:00`)
@@ -734,10 +734,7 @@ function CountdownWidget({
     days === 0 ? "D-DAY" : days > 0 ? `D-${days}` : `D+${Math.abs(days)}`;
   const fontSize = widget.data.countdownFontSize || 56;
   const resizeText = (next: number) =>
-    onData({
-      ...widget.data,
-      countdownFontSize: Math.min(120, Math.max(28, next)),
-    });
+    onFontSize(Math.min(120, Math.max(28, next)));
 
   return (
     <div className="countdown-content">
@@ -935,14 +932,6 @@ export default function Home() {
   const modalWidget = modal?.widgetId
     ? store.widgets.find((w) => w.id === modal.widgetId)
     : undefined;
-  const counts = useMemo(
-    () => ({
-      todo: visibleWidgets.filter((w) => w.type === "todo" && !w.data.done)
-        .length,
-      bookmark: visibleWidgets.filter((w) => w.type === "bookmark").length,
-    }),
-    [visibleWidgets],
-  );
   const addWidget = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -1026,6 +1015,12 @@ export default function Home() {
         const preset =
           s.settings.sizePresets.find((p) => p.id === presetId) ||
           s.settings.sizePresets[0];
+        const contentMinimum =
+          type === "calendar"
+            ? { width: 320, height: 350 }
+            : type === "weather"
+              ? { width: 330, height: 270 }
+              : { width: 0, height: 0 };
         return {
           ...s,
           widgets: [
@@ -1049,8 +1044,8 @@ export default function Home() {
                 ...make(type, title, 0, 0, data).layout,
                 x: 80 + (visibleWidgets.length % 4) * 40,
                 y: 80 + (visibleWidgets.length % 5) * 40,
-                width: preset.width,
-                height: preset.height,
+                width: Math.max(preset.width, contentMinimum.width),
+                height: Math.max(preset.height, contentMinimum.height),
               },
             },
           ],
@@ -1137,38 +1132,6 @@ export default function Home() {
           </div>
         </div>
       </header>
-      <section className="commandbar">
-        <div className="status">
-          <span className="online" />
-          SYSTEM ONLINE <span className="slash">{"//"}</span>{" "}
-          <b>{store.widgets.length}</b> WIDGETS{" "}
-          <span className="slash">{"//"}</span> AUTO-SAVED
-        </div>
-        <div className="widget-create">
-          <button className="widget-create-trigger">WIDGET＋</button>
-          <div className="widget-menu">
-            {(
-              [
-                "bookmark",
-                "note",
-                "todo",
-                "weather",
-                "calendar",
-                "timer",
-                "countdown",
-              ] as Kind[]
-            ).map((type) => (
-              <button
-                key={type}
-                style={{ color: store.settings.widgetColors[type] }}
-                onClick={() => setModal({ type })}
-              >
-                {type === "launcher" ? "QUICK LAUNCH" : type.toUpperCase()}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
       <section className="stats" aria-label="요약">
         <div className="datetime">
           <span>
@@ -1188,33 +1151,31 @@ export default function Home() {
           </b>
           <small>{clock.getFullYear()}</small>
         </div>
-        <article>
-          <span>OPEN TASKS</span>
-          <b>{String(counts.todo).padStart(2, "0")}</b>
-          <i>FOCUS</i>
-        </article>
-        <article>
-          <span>BOOKMARKS</span>
-          <b>{String(counts.bookmark).padStart(2, "0")}</b>
-          <i>LINKS</i>
-        </article>
-        <article>
-          <span>SELECTED</span>
-          <b>{String(selected.length).padStart(2, "0")}</b>
-          <i>WIDGETS</i>
-        </article>
-        <div className="quote">
-          <textarea
-            aria-label="상단 메모"
-            value={store.settings.message}
-            onChange={(e) =>
-              setStore((s) => ({
-                ...s,
-                settings: { ...s.settings, message: e.target.value },
-              }))
-            }
-            placeholder="기억할 문장을 적어두세요."
-          />
+        <div className="stats-spacer" />
+        <div className="widget-create">
+          <button className="widget-create-trigger">WIDGET＋</button>
+          <div className="widget-menu">
+            {(
+              [
+                "bookmark",
+                "note",
+                "todo",
+                "weather",
+                "calendar",
+                "timer",
+                "countdown",
+                "launcher",
+              ] as Kind[]
+            ).map((type) => (
+              <button
+                key={type}
+                style={{ color: store.settings.widgetColors[type] }}
+                onClick={() => setModal({ type })}
+              >
+                {type === "launcher" ? "QUICK LAUNCH" : type.toUpperCase()}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
       <section className="canvas-wrap">
@@ -1834,7 +1795,34 @@ export default function Home() {
                       {w.type === "countdown" && (
                         <CountdownWidget
                           widget={w}
-                          onData={(data) => update(w.id, { data })}
+                          onFontSize={(fontSize) =>
+                            setStore((s) => ({
+                              ...s,
+                              widgets: s.widgets.map((item) =>
+                                item.id === w.id
+                                  ? {
+                                      ...item,
+                                      data: {
+                                        ...item.data,
+                                        countdownFontSize: fontSize,
+                                      },
+                                      layout: {
+                                        ...item.layout,
+                                        width: Math.max(
+                                          item.layout.width,
+                                          Math.ceil(fontSize * 3.2 + 36),
+                                        ),
+                                        height: Math.max(
+                                          item.layout.height,
+                                          fontSize + (item.title ? 130 : 92),
+                                        ),
+                                      },
+                                      updatedAt: now(),
+                                    }
+                                  : item,
+                              ),
+                            }))
+                          }
                         />
                       )}
                       {w.type === "launcher" && (
