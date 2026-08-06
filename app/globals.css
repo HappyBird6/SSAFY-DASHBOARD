@@ -604,7 +604,7 @@ button {
   background: rgba(8, 11, 16, 0.9);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 2147482000;
   backdrop-filter: blur(12px);
 }
 .brand {
@@ -694,7 +694,7 @@ button {
 }
 .widget-create {
   position: relative;
-  z-index: 120;
+  z-index: 2;
   padding-bottom: 1px;
 }
 .widget-create-trigger,
@@ -746,6 +746,8 @@ button {
 }
 .stats {
   margin: 24px 32px;
+  position: relative;
+  z-index: 2147481000;
   display: grid;
   grid-template-columns: 140px 140px 140px 1fr;
   border: 1px solid var(--line);
@@ -805,6 +807,8 @@ button {
 }
 .canvas-wrap {
   margin: 0 32px;
+  position: relative;
+  z-index: 1;
   border: 1px solid var(--line);
   background: #090d12;
 }
@@ -1091,32 +1095,35 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.bookmark-content {
-  flex: 1 !important;
-  display: flex !important;
-  align-items: flex-start !important;
-  justify-content: center !important;
-  color: inherit !important;
-  text-decoration: none !important;
-  border: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  width: 100% !important;
-}
-.bookmark-content h2 {
-  margin: 0;
-  text-align: left;
-  font-size: 15px;
-}
 .widget-bookmark .widget-body {
-  padding: 8px 10px;
+  padding: 10px;
   transition: background 0.15s ease;
 }
 .widget-bookmark:hover .widget-body {
   background: #38bdf80d;
 }
-.bookmark-content:hover h2 {
-  color: var(--cyan);
+.bookmark-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  min-height: 0;
+  overflow: auto;
+}
+.bookmark-list a {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  background: var(--control-bg);
+  color: var(--text);
+  text-align: left;
+  text-decoration: none;
+  font-size: 12px;
+}
+.bookmark-list a:hover {
+  border-color: var(--cyan);
+  background: var(--active-bg);
 }
 .study-timer,
 .countdown-content {
@@ -1133,13 +1140,14 @@ button {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
 }
-.study-timer > div,
-.countdown-controls {
+.study-timer > div {
   display: flex;
   gap: 7px;
 }
 .study-timer button,
-.countdown-controls button {
+.countdown-size-actions button,
+.add-bookmark-link,
+.bookmark-link-row button {
   border: 1px solid var(--line);
   background: var(--control-bg);
   color: var(--text);
@@ -1153,21 +1161,52 @@ button {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.widget-countdown .widget-body {
-  position: relative;
-  padding-bottom: 54px;
+.countdown-size-picker,
+.bookmark-links-editor {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
 }
-.widget-countdown .countdown-controls {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 100%;
-  min-height: 42px;
+.countdown-size-picker > span,
+.bookmark-links-editor legend {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+.countdown-size-actions {
+  display: flex;
   align-items: center;
-  justify-content: flex-start;
-  padding: 7px 10px;
-  border-top: 1px solid var(--line);
+  gap: 7px;
+}
+.countdown-size-actions small {
+  margin-left: auto;
+  color: var(--muted);
+}
+.countdown-preview {
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
   background: var(--surface-subtle);
+}
+.countdown-preview strong {
+  color: #f97316;
+  line-height: 1;
+  white-space: nowrap;
+}
+.bookmark-link-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.7fr) minmax(160px, 1.3fr) auto;
+  gap: 7px;
+}
+.bookmark-link-row button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.add-bookmark-link {
+  justify-self: start;
 }
 .quick-launch-grid {
   display: grid;

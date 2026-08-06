@@ -20,6 +20,7 @@ type Layout = {
   height: number;
   zIndex: number;
 };
+type BookmarkLink = { id: string; label: string; url: string };
 type Widget = {
   id: string;
   type: Kind;
@@ -31,6 +32,7 @@ type Widget = {
   locked: boolean;
   data: {
     url?: string;
+    links?: BookmarkLink[];
     body?: string;
     done?: boolean;
     due?: string;
@@ -141,6 +143,11 @@ const backupSchema = z.object({
       locked: z.boolean(),
       data: z.object({
         url: z.string().optional(),
+        links: z
+          .array(
+            z.object({ id: z.string(), label: z.string(), url: z.string() }),
+          )
+          .optional(),
         body: z.string().optional(),
         done: z.boolean().optional(),
         due: z.string().optional(),
@@ -261,15 +268,22 @@ const normalizeStore = (value: unknown): Store => {
     },
     workspaces,
     activeWorkspaceId,
-    widgets: parsed.widgets.map((w) => ({
-      ...w,
-      groupId: null,
-      workspaceId: w.workspaceId || MAIN_WORKSPACE,
-      style:
-        !w.style || w.style.borderColor === "#303b47"
-          ? { borderColor: widgetColors[w.type] }
-          : w.style,
-    })),
+    widgets: parsed.widgets.map((w) => {
+      const links =
+        w.type === "bookmark" && !w.data.links?.length && w.data.url
+          ? [{ id: crypto.randomUUID(), label: w.title || "LINK", url: w.data.url }]
+          : w.data.links;
+      return {
+        ...w,
+        groupId: null,
+        workspaceId: w.workspaceId || MAIN_WORKSPACE,
+        data: { ...w.data, links },
+        style:
+          !w.style || w.style.borderColor === "#303b47"
+            ? { borderColor: widgetColors[w.type] }
+            : w.style,
+      };
+    }),
   };
 };
 
@@ -717,13 +731,7 @@ function StudyTimer({
   );
 }
 
-function CountdownWidget({
-  widget,
-  onFontSize,
-}: {
-  widget: Widget;
-  onFontSize: (fontSize: number) => void;
-}) {
+function CountdownWidget({ widget }: { widget: Widget }) {
   const target = widget.data.countdownDate
     ? new Date(`${widget.data.countdownDate}T00:00:00`)
     : new Date();
@@ -733,21 +741,87 @@ function CountdownWidget({
   const text =
     days === 0 ? "D-DAY" : days > 0 ? `D-${days}` : `D+${Math.abs(days)}`;
   const fontSize = widget.data.countdownFontSize || 56;
-  const resizeText = (next: number) =>
-    onFontSize(Math.min(120, Math.max(28, next)));
-
   return (
     <div className="countdown-content">
       <strong style={{ fontSize }}>{text}</strong>
-      <div className="countdown-controls">
-        <button aria-label="글자 작게" onClick={() => resizeText(fontSize - 4)}>
+    </div>
+  );
+}
+
+function CountdownSizePicker({ initial }: { initial: number }) {
+  const [fontSize, setFontSize] = useState(initial);
+  const resize = (amount: number) =>
+    setFontSize((size) => Math.min(120, Math.max(28, size + amount)));
+  return (
+    <div className="countdown-size-picker">
+      <input type="hidden" name="countdownFontSize" value={fontSize} />
+      <span>글자 크기</span>
+      <div className="countdown-size-actions">
+        <button type="button" onClick={() => resize(-4)} aria-label="글자 작게">
           A−
         </button>
-        <button aria-label="글자 크게" onClick={() => resizeText(fontSize + 4)}>
+        <button type="button" onClick={() => resize(4)} aria-label="글자 크게">
           A＋
         </button>
+        <small>{fontSize}px</small>
+      </div>
+      <div className="countdown-preview" aria-label="카운트다운 미리보기">
+        <strong style={{ fontSize }}>D-30</strong>
       </div>
     </div>
+  );
+}
+
+function BookmarkLinksEditor({ widget }: { widget?: Widget }) {
+  const existing = widget?.data.links?.length
+    ? widget.data.links
+    : widget?.data.url
+      ? [{ id: crypto.randomUUID(), label: widget.title || "LINK", url: widget.data.url }]
+      : [{ id: crypto.randomUUID(), label: "새 링크", url: "https://" }];
+  const [links, setLinks] = useState(existing);
+  return (
+    <fieldset className="bookmark-links-editor">
+      <legend>링크 목록</legend>
+      {links.map((link, index) => (
+        <div className="bookmark-link-row" key={link.id}>
+          <input
+            name="linkLabel"
+            aria-label={`${index + 1}번 링크 이름`}
+            defaultValue={link.label}
+            placeholder="링크 이름"
+            required
+          />
+          <input
+            name="linkUrl"
+            aria-label={`${index + 1}번 URL`}
+            type="url"
+            defaultValue={link.url}
+            placeholder="https://"
+            required
+          />
+          <button
+            type="button"
+            aria-label={`${index + 1}번 링크 삭제`}
+            disabled={links.length === 1}
+            onClick={() => setLinks((items) => items.filter((item) => item.id !== link.id))}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+      <button
+        className="add-bookmark-link"
+        type="button"
+        onClick={() =>
+          setLinks((items) => [
+            ...items,
+            { id: crypto.randomUUID(), label: "", url: "https://" },
+          ])
+        }
+      >
+        링크 추가
+      </button>
+    </fieldset>
   );
 }
 
@@ -947,6 +1021,17 @@ export default function Home() {
     const borderColor = String(form.get("borderColor") || "#303b47");
     const presetId = String(form.get("sizePreset") || "");
     const workspaceId = String(form.get("workspaceId") || "");
+    const bookmarkLinks = form
+      .getAll("linkUrl")
+      .map((url, index) => ({
+        id: crypto.randomUUID(),
+        label: String(form.getAll("linkLabel")[index] || `LINK ${index + 1}`),
+        url: String(url),
+      }))
+      .filter((link) => link.url && link.url !== "https://");
+    const countdownFontSize = Number(
+      form.get("countdownFontSize") || modalWidget?.data.countdownFontSize || 56,
+    );
     const data =
       type === "launcher"
         ? {
@@ -964,7 +1049,7 @@ export default function Home() {
           : type === "countdown"
             ? {
                 countdownDate: String(form.get("countdownDate") || ""),
-                countdownFontSize: modalWidget?.data.countdownFontSize || 56,
+                countdownFontSize,
               }
             : type === "weather"
               ? {
@@ -975,7 +1060,10 @@ export default function Home() {
               : type === "calendar"
                 ? {}
                 : type === "bookmark"
-                  ? { url: String(form.get("content") || "https://") }
+                  ? {
+                      links: bookmarkLinks,
+                      url: bookmarkLinks[0]?.url,
+                    }
                   : type === "note"
                     ? { body: String(form.get("content") || "") }
                     : {
@@ -996,13 +1084,28 @@ export default function Home() {
                   data,
                   workspaceId: workspaceId || w.workspaceId,
                   style: { borderColor },
-                  layout: preset
-                    ? {
-                        ...w.layout,
-                        width: preset.width,
-                        height: preset.height,
-                      }
-                    : w.layout,
+                  layout: (() => {
+                    const base = preset
+                      ? { ...w.layout, width: preset.width, height: preset.height }
+                      : w.layout;
+                    const requiredHeight =
+                      type === "bookmark"
+                        ? 68 + (title ? 38 : 0) + bookmarkLinks.length * 44
+                        : type === "countdown"
+                          ? countdownFontSize + (title ? 92 : 62)
+                          : 0;
+                    const requiredWidth =
+                      type === "bookmark"
+                        ? 250
+                        : type === "countdown"
+                          ? Math.ceil(countdownFontSize * 3.2 + 36)
+                          : 0;
+                    return {
+                      ...base,
+                      width: Math.max(base.width, requiredWidth),
+                      height: Math.max(base.height, requiredHeight),
+                    };
+                  })(),
                   updatedAt: now(),
                 }
               : w,
@@ -1020,6 +1123,16 @@ export default function Home() {
             ? { width: 320, height: 350 }
             : type === "weather"
               ? { width: 330, height: 270 }
+              : type === "bookmark"
+                ? {
+                    width: 250,
+                    height: 68 + (title ? 38 : 0) + bookmarkLinks.length * 44,
+                  }
+                : type === "countdown"
+                  ? {
+                      width: Math.ceil(countdownFontSize * 3.2 + 36),
+                      height: countdownFontSize + (title ? 92 : 62),
+                    }
               : { width: 0, height: 0 };
         return {
           ...s,
@@ -1058,7 +1171,6 @@ export default function Home() {
   const remove = (id: string) => {
     if (!confirm("이 위젯을 삭제할까요?")) return;
     setStore((s) => ({ ...s, widgets: s.widgets.filter((w) => w.id !== id) }));
-    setToast("위젯을 삭제했습니다.");
   };
   const exportJson = () => {
     const blob = new Blob(
@@ -1733,14 +1845,28 @@ export default function Home() {
                 </div>
                 <div className="widget-body">
                   {w.type === "bookmark" ? (
-                    <a
-                      className="bookmark-content"
-                      href={w.data.url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <h2>{w.title}</h2>
-                    </a>
+                    <>
+                      {w.title && (
+                        <h2
+                          className="widget-title"
+                          style={{ borderBottomColor: w.style.borderColor }}
+                        >
+                          {w.title}
+                        </h2>
+                      )}
+                      <div className="bookmark-list">
+                        {(w.data.links?.length
+                          ? w.data.links
+                          : w.data.url
+                            ? [{ id: w.id, label: w.title || "LINK", url: w.data.url }]
+                            : []
+                        ).map((link) => (
+                          <a key={link.id} href={link.url} target="_blank" rel="noreferrer">
+                            {link.label}
+                          </a>
+                        ))}
+                      </div>
+                    </>
                   ) : (
                     <>
                       {w.type !== "calendar" && w.title && (
@@ -1793,37 +1919,7 @@ export default function Home() {
                         />
                       )}
                       {w.type === "countdown" && (
-                        <CountdownWidget
-                          widget={w}
-                          onFontSize={(fontSize) =>
-                            setStore((s) => ({
-                              ...s,
-                              widgets: s.widgets.map((item) =>
-                                item.id === w.id
-                                  ? {
-                                      ...item,
-                                      data: {
-                                        ...item.data,
-                                        countdownFontSize: fontSize,
-                                      },
-                                      layout: {
-                                        ...item.layout,
-                                        width: Math.max(
-                                          item.layout.width,
-                                          Math.ceil(fontSize * 3.2 + 36),
-                                        ),
-                                        height: Math.max(
-                                          item.layout.height,
-                                          fontSize + (item.title ? 130 : 92),
-                                        ),
-                                      },
-                                      updatedAt: now(),
-                                    }
-                                  : item,
-                              ),
-                            }))
-                          }
-                        />
+                        <CountdownWidget widget={w} />
                       )}
                       {w.type === "launcher" && (
                         <div className="quick-launch-grid">
@@ -1931,26 +2027,18 @@ export default function Home() {
                 }
               />
             </label>
-            {(modal.type === "bookmark" || modal.type === "note") && (
+            {modal.type === "note" && (
               <label>
-                {modal.type === "bookmark" ? "URL" : "내용"}
-                {modal.type === "note" ? (
-                  <textarea
-                    name="content"
-                    rows={5}
-                    defaultValue={modalWidget?.data.body}
-                    placeholder="메모를 입력하세요"
-                  />
-                ) : (
-                  <input
-                    name="content"
-                    type="url"
-                    defaultValue={modalWidget?.data.url || "https://"}
-                    required
-                  />
-                )}
+                내용
+                <textarea
+                  name="content"
+                  rows={5}
+                  defaultValue={modalWidget?.data.body}
+                  placeholder="메모를 입력하세요"
+                />
               </label>
             )}
+            {modal.type === "bookmark" && <BookmarkLinksEditor widget={modalWidget} />}
             {modal.type === "weather" && (
               <LocationPicker widget={modalWidget} />
             )}
@@ -1968,21 +2056,26 @@ export default function Home() {
               </label>
             )}
             {modal.type === "countdown" && (
-              <label>
-                목표 날짜
-                <input
-                  name="countdownDate"
-                  type="date"
-                  defaultValue={
-                    modalWidget?.data.countdownDate ||
-                    new Date(Date.now() + 30 * 86400000)
-                      .toISOString()
-                      .slice(0, 10)
-                  }
-                  onClick={(e) => e.currentTarget.showPicker?.()}
-                  required
+              <>
+                <label>
+                  목표 날짜
+                  <input
+                    name="countdownDate"
+                    type="date"
+                    defaultValue={
+                      modalWidget?.data.countdownDate ||
+                      new Date(Date.now() + 30 * 86400000)
+                        .toISOString()
+                        .slice(0, 10)
+                    }
+                    onClick={(e) => e.currentTarget.showPicker?.()}
+                    required
+                  />
+                </label>
+                <CountdownSizePicker
+                  initial={modalWidget?.data.countdownFontSize || 56}
                 />
-              </label>
+              </>
             )}
             {modal.type === "launcher" && (
               <>
