@@ -878,13 +878,13 @@ export default function Home() {
       .resizable({
         edges: { right: ".resize-corner", bottom: ".resize-corner" },
         modifiers: [
-          interact.modifiers.restrictSize({ min: { width: 180, height: 86 } }),
+          interact.modifiers.restrictSize({ min: { width: 210, height: 86 } }),
         ],
         listeners: {
           move(e) {
             const target = e.target as HTMLElement;
             const isBookmark = target.dataset.type === "bookmark";
-            const width = Math.max(isBookmark ? 180 : 240, e.rect.width);
+            const width = Math.max(isBookmark ? 210 : 240, e.rect.width);
             const height = Math.max(isBookmark ? 86 : 150, e.rect.height);
             const x = Number(target.dataset.x || 0) + e.deltaRect.left;
             const y = Math.max(
@@ -937,7 +937,12 @@ export default function Home() {
     const form = new FormData(event.currentTarget);
     const type = modal!.type;
     const title = String(
-      form.get("title") || (type === "calendar" ? "달력" : "새 위젯"),
+      form.get("title") ||
+        (type === "calendar"
+          ? "달력"
+          : type === "timer" || type === "countdown"
+            ? ""
+            : "새 위젯"),
     );
     const borderColor = String(form.get("borderColor") || "#303b47");
     const presetId = String(form.get("sizePreset") || "");
@@ -1039,10 +1044,8 @@ export default function Home() {
   };
   const remove = (id: string) => {
     if (!confirm("이 위젯을 삭제할까요?")) return;
-    const before = store.widgets.find((w) => w.id === id);
     setStore((s) => ({ ...s, widgets: s.widgets.filter((w) => w.id !== id) }));
-    setToast("삭제했습니다. 되돌리려면 Ctrl+Z 대신 백업을 활용해주세요.");
-    if (!before) return;
+    setToast("위젯을 삭제했습니다.");
   };
   const exportJson = () => {
     const blob = new Blob(
@@ -1123,22 +1126,29 @@ export default function Home() {
           <b>{store.widgets.length}</b> WIDGETS{" "}
           <span className="slash">{"//"}</span> AUTO-SAVED
         </div>
-        <div className="actions">
-          <button onClick={() => setModal({ type: "bookmark" })}>
-            + BOOKMARK
-          </button>
-          <button onClick={() => setModal({ type: "note" })}>+ NOTE</button>
-          <button onClick={() => setModal({ type: "todo" })}>+ TODO</button>
-          <button onClick={() => setModal({ type: "weather" })}>
-            + WEATHER
-          </button>
-          <button onClick={() => setModal({ type: "calendar" })}>
-            + CALENDAR
-          </button>
-          <button onClick={() => setModal({ type: "timer" })}>+ TIMER</button>
-          <button onClick={() => setModal({ type: "countdown" })}>
-            + COUNTDOWN
-          </button>
+        <div className="widget-create">
+          <button className="widget-create-trigger">WIDGET＋</button>
+          <div className="widget-menu">
+            {(
+              [
+                "bookmark",
+                "note",
+                "todo",
+                "weather",
+                "calendar",
+                "timer",
+                "countdown",
+              ] as Kind[]
+            ).map((type) => (
+              <button
+                key={type}
+                style={{ color: store.settings.widgetColors[type] }}
+                onClick={() => setModal({ type })}
+              >
+                {type.toUpperCase()}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
       <section className="stats" aria-label="요약">
@@ -1751,8 +1761,13 @@ export default function Home() {
                     </a>
                   ) : (
                     <>
-                      {w.type !== "calendar" && w.type !== "countdown" && (
-                        <h2>{w.title}</h2>
+                      {w.type !== "calendar" && w.title && (
+                        <h2
+                          className="widget-title"
+                          style={{ borderBottomColor: w.style.borderColor }}
+                        >
+                          {w.title}
+                        </h2>
                       )}
                       {w.type === "note" && (
                         <textarea
@@ -1841,7 +1856,9 @@ export default function Home() {
                 제목
                 <input
                   name="title"
-                  required
+                  required={
+                    modal.type !== "timer" && modal.type !== "countdown"
+                  }
                   autoFocus
                   defaultValue={modalWidget?.title}
                   placeholder="제목을 입력하세요"

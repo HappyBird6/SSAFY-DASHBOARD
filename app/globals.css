@@ -683,6 +683,58 @@ button {
 .actions .group {
   color: var(--purple);
 }
+.widget-create {
+  position: relative;
+  z-index: 120;
+  padding-bottom: 1px;
+}
+.widget-create-trigger,
+.widget-menu button {
+  border: 1px solid var(--line);
+  background: var(--control-bg);
+  padding: 10px 14px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+.widget-create-trigger {
+  color: var(--cyan);
+}
+.widget-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 110px);
+  gap: 7px;
+  width: max-content;
+  padding: 9px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--widget-shadow);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease,
+    visibility 0.12s;
+}
+.widget-create:hover .widget-menu,
+.widget-create:focus-within .widget-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+.widget-menu button {
+  width: 110px;
+  height: 40px;
+  padding: 6px;
+  text-align: center;
+}
+.widget-menu button:hover {
+  border-color: currentColor;
+  background: var(--active-bg);
+}
 .stats {
   margin: 24px 32px;
   display: grid;
@@ -822,6 +874,7 @@ button {
   display: grid;
   place-items: center;
   border: 1px solid;
+  flex: 0 0 21px;
 }
 .kind-bookmark {
   color: var(--cyan);
@@ -1014,6 +1067,11 @@ button {
   letter-spacing: 0.04em;
   margin: 0 0 14px;
 }
+.widget-title {
+  width: 100%;
+  padding-bottom: 10px;
+  border-bottom: 1px solid;
+}
 .url {
   font-size: 10px;
   color: var(--muted);
@@ -1031,6 +1089,7 @@ button {
   border: 0 !important;
   padding: 0 !important;
   margin: 0 !important;
+  width: 100% !important;
 }
 .bookmark-content h2 {
   margin: 0;
@@ -1081,6 +1140,15 @@ button {
   line-height: 1;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+.widget-countdown .widget-body {
+  position: relative;
+  padding-bottom: 42px;
+}
+.widget-countdown .countdown-controls {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
 }
 .widget textarea {
   flex: 1;
