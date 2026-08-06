@@ -975,7 +975,8 @@ button {
   border-bottom: 0;
 }
 .location-results small,
-.selected-location {
+.selected-location,
+.search-message {
   color: var(--muted);
 }
 .widget-top small {
@@ -1017,21 +1018,18 @@ button {
 .bookmark-content {
   flex: 1 !important;
   display: flex !important;
-  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
   color: inherit !important;
   text-decoration: none !important;
   border: 0 !important;
   padding: 0 !important;
   margin: 0 !important;
 }
-.bookmark-content .url {
-  font-size: 11px;
-}
-.bookmark-open {
-  margin-top: auto;
-  color: var(--cyan);
-  font-size: 10px;
-  letter-spacing: 0.08em;
+.bookmark-content h2 {
+  margin: 0;
+  text-align: center;
+  font-size: 15px;
 }
 .bookmark-content:hover h2 {
   color: var(--cyan);

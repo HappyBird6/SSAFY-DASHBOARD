@@ -299,6 +299,22 @@ type GeoResult = {
   admin1?: string;
   admin2?: string;
 };
+type NominatimResult = {
+  place_id: number;
+  name?: string;
+  display_name: string;
+  lat: string;
+  lon: string;
+  address?: {
+    borough?: string;
+    city_district?: string;
+    county?: string;
+    city?: string;
+    town?: string;
+    village?: string;
+    state?: string;
+  };
+};
 
 function LocationPicker({ widget }: { widget?: Widget }) {
   const legacy =
@@ -314,25 +330,47 @@ function LocationPicker({ widget }: { widget?: Widget }) {
   });
   const [results, setResults] = useState<GeoResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchMessage, setSearchMessage] = useState("");
 
   const search = async () => {
     if (query.trim().length < 2) return;
     setSearching(true);
+    setSearchMessage("");
     try {
       const params = new URLSearchParams({
-        name: query.trim(),
-        count: "8",
-        language: "ko",
-        format: "json",
-        countryCode: "KR",
+        q: `${query.trim()}, 대한민국`,
+        format: "jsonv2",
+        addressdetails: "1",
+        "accept-language": "ko",
+        countrycodes: "kr",
+        limit: "8",
+        layer: "address",
       });
       const response = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?${params}`,
+        `https://nominatim.openstreetmap.org/search?${params}`,
       );
-      const data = (await response.json()) as { results?: GeoResult[] };
-      setResults(data.results || []);
+      if (!response.ok) throw new Error("search unavailable");
+      const data = (await response.json()) as NominatimResult[];
+      const normalized = data.map((item) => ({
+        id: item.place_id,
+        name: item.name || item.display_name.split(",")[0],
+        latitude: Number(item.lat),
+        longitude: Number(item.lon),
+        admin2:
+          item.address?.borough ||
+          item.address?.city_district ||
+          item.address?.county ||
+          item.address?.city ||
+          item.address?.town ||
+          item.address?.village,
+        admin1: item.address?.state,
+      }));
+      setResults(normalized);
+      if (!normalized.length)
+        setSearchMessage("검색 결과가 없습니다. 동·구 이름을 바꿔보세요.");
     } catch {
       setResults([]);
+      setSearchMessage("지역 검색에 실패했습니다. 잠시 후 다시 시도하세요.");
     } finally {
       setSearching(false);
     }
@@ -379,6 +417,9 @@ function LocationPicker({ widget }: { widget?: Widget }) {
             </button>
           ))}
         </div>
+      )}
+      {searchMessage && (
+        <small className="search-message">{searchMessage}</small>
       )}
       <small className="selected-location">선택 지역 · {selected.name}</small>
       <input type="hidden" name="locationName" value={selected.name} />
@@ -680,23 +721,26 @@ export default function Home() {
       .resizable({
         edges: { right: ".resize-corner", bottom: ".resize-corner" },
         modifiers: [
-          interact.modifiers.restrictSize({ min: { width: 240, height: 150 } }),
+          interact.modifiers.restrictSize({ min: { width: 180, height: 86 } }),
         ],
         listeners: {
           move(e) {
             const target = e.target as HTMLElement;
+            const isBookmark = target.dataset.type === "bookmark";
+            const width = Math.max(isBookmark ? 180 : 240, e.rect.width);
+            const height = Math.max(isBookmark ? 86 : 150, e.rect.height);
             const x = Number(target.dataset.x || 0) + e.deltaRect.left;
             const y = Math.max(
               0,
               Number(target.dataset.y || 0) + e.deltaRect.top,
             );
-            target.style.width = `${e.rect.width}px`;
-            target.style.height = `${e.rect.height}px`;
+            target.style.width = `${width}px`;
+            target.style.height = `${height}px`;
             target.style.transform = `translate(${x}px, ${y}px)`;
             target.dataset.x = String(x);
             target.dataset.y = String(y);
-            target.dataset.width = String(e.rect.width);
-            target.dataset.height = String(e.rect.height);
+            target.dataset.width = String(width);
+            target.dataset.height = String(height);
           },
           end(e) {
             const target = e.target as HTMLElement;
@@ -1418,6 +1462,7 @@ export default function Home() {
               <article
                 key={w.id}
                 data-id={w.id}
+                data-type={w.type}
                 data-x={w.layout.x}
                 data-y={w.layout.y}
                 data-width={w.layout.width}
@@ -1525,8 +1570,6 @@ export default function Home() {
                       rel="noreferrer"
                     >
                       <h2>{w.title}</h2>
-                      <p className="url">{w.data.url}</p>
-                      <span className="bookmark-open">OPEN RESOURCE ↗</span>
                     </a>
                   ) : (
                     <>
