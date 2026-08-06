@@ -28,6 +28,9 @@ type Widget = {
     due?: string;
     priority?: string;
     city?: string;
+    locationName?: string;
+    latitude?: number;
+    longitude?: number;
   };
   createdAt: string;
   updatedAt: string;
@@ -114,6 +117,9 @@ const backupSchema = z.object({
         due: z.string().optional(),
         priority: z.string().optional(),
         city: z.string().optional(),
+        locationName: z.string().optional(),
+        latitude: z.number().optional(),
+        longitude: z.number().optional(),
       }),
       createdAt: z.string(),
       updatedAt: z.string(),
@@ -285,26 +291,128 @@ const weatherLabel = (code: number) => {
   return ["β›οΈ", "λ‡μ°"];
 };
 
-function WeatherWidget({ cityId }: { cityId: string }) {
-  const city =
-    KOREAN_CITIES.find((item) => item.id === cityId) || KOREAN_CITIES[0];
+type GeoResult = {
+  id: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  admin1?: string;
+  admin2?: string;
+};
+
+function LocationPicker({ widget }: { widget?: Widget }) {
+  const legacy =
+    KOREAN_CITIES.find((item) => item.id === widget?.data.city) ||
+    KOREAN_CITIES[0];
+  const [query, setQuery] = useState(
+    widget?.data.locationName || (widget ? legacy.name : ""),
+  );
+  const [selected, setSelected] = useState({
+    name: widget?.data.locationName || legacy.name,
+    latitude: widget?.data.latitude ?? legacy.latitude,
+    longitude: widget?.data.longitude ?? legacy.longitude,
+  });
+  const [results, setResults] = useState<GeoResult[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  const search = async () => {
+    if (query.trim().length < 2) return;
+    setSearching(true);
+    try {
+      const params = new URLSearchParams({
+        name: query.trim(),
+        count: "8",
+        language: "ko",
+        format: "json",
+        countryCode: "KR",
+      });
+      const response = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?${params}`,
+      );
+      const data = (await response.json()) as { results?: GeoResult[] };
+      setResults(data.results || []);
+    } catch {
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  return (
+    <div className="location-picker">
+      <label>
+        μ§€μ—­ κ²€μƒ‰
+        <span className="location-search">
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="μ: μ—­μ‚Όλ™, μ •μλ™, ν•΄μ΄λ€κµ¬"
+          />
+          <button type="button" onClick={search}>
+            {searching ? "κ²€μƒ‰ μ¤‘" : "κ²€μƒ‰"}
+          </button>
+        </span>
+      </label>
+      {results.length > 0 && (
+        <div className="location-results">
+          {results.map((result) => (
+            <button
+              type="button"
+              key={result.id}
+              onClick={() => {
+                const name = [result.name, result.admin2, result.admin1]
+                  .filter(Boolean)
+                  .join(" Β· ");
+                setSelected({
+                  name,
+                  latitude: result.latitude,
+                  longitude: result.longitude,
+                });
+                setQuery(result.name);
+                setResults([]);
+              }}
+            >
+              <strong>{result.name}</strong>
+              <small>
+                {[result.admin2, result.admin1].filter(Boolean).join(" Β· ")}
+              </small>
+            </button>
+          ))}
+        </div>
+      )}
+      <small className="selected-location">μ„ νƒ μ§€μ—­ Β· {selected.name}</small>
+      <input type="hidden" name="locationName" value={selected.name} />
+      <input type="hidden" name="latitude" value={selected.latitude} />
+      <input type="hidden" name="longitude" value={selected.longitude} />
+    </div>
+  );
+}
+
+function WeatherWidget({ widget }: { widget: Widget }) {
+  const legacy =
+    KOREAN_CITIES.find((item) => item.id === widget.data.city) ||
+    KOREAN_CITIES[0];
+  const location = {
+    name: widget.data.locationName || legacy.name,
+    latitude: widget.data.latitude ?? legacy.latitude,
+    longitude: widget.data.longitude ?? legacy.longitude,
+  };
   const [weather, setWeather] = useState<WeatherResult | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const cacheKey = `ssafy-weather-${city.id}`;
+    const cacheKey = `ssafy-weather-${location.latitude}-${location.longitude}`;
     const controller = new AbortController();
     const load = async () => {
       try {
         const params = new URLSearchParams({
-          latitude: String(city.latitude),
-          longitude: String(city.longitude),
+          latitude: String(location.latitude),
+          longitude: String(location.longitude),
           current: "temperature_2m,apparent_temperature,weather_code",
           daily:
             "temperature_2m_max,temperature_2m_min,precipitation_probability_max",
           timezone: "Asia/Seoul",
           forecast_days: "1",
-          models: "kma_seamless",
         });
         const response = await fetch(
           `https://api.open-meteo.com/v1/forecast?${params}`,
@@ -318,15 +426,15 @@ function WeatherWidget({ cityId }: { cityId: string }) {
         if ((reason as Error).name === "AbortError") return;
         const cached = localStorage.getItem(cacheKey);
         if (cached) setWeather(JSON.parse(cached));
-        else setError("KMA μλ³΄ λ°μ΄ν„°λ¥Ό λ¶λ¬μ¬ μ μ—†μµλ‹λ‹¤.");
+        else setError("λ‚ μ”¨ μλ³΄ λ°μ΄ν„°λ¥Ό λ¶λ¬μ¬ μ μ—†μµλ‹λ‹¤.");
       }
     };
     load();
     return () => controller.abort();
-  }, [city]);
+  }, [location.latitude, location.longitude]);
 
   if (!weather)
-    return <p className="api-state">{error || "KMA μλ³΄ λ¶λ¬μ¤λ” μ¤‘β€¦"}</p>;
+    return <p className="api-state">{error || "λ‚ μ”¨ μλ³΄ λ¶λ¬μ¤λ” μ¤‘β€¦"}</p>;
   const [icon, label] = weatherLabel(weather.current.weather_code);
   return (
     <div className="weather-content">
@@ -335,8 +443,8 @@ function WeatherWidget({ cityId }: { cityId: string }) {
           {icon}
         </span>
         <div>
-          <strong>{city.name}</strong>
-          <small>{label} Β· KMA SEAMLESS</small>
+          <strong>{location.name}</strong>
+          <small>{label} Β· BEST MATCH</small>
         </div>
         <b>{Math.round(weather.current.temperature_2m)}Β°</b>
       </div>
@@ -433,19 +541,6 @@ function CalendarWidget() {
           );
         })}
       </div>
-      <div className="holiday-list">
-        {holidays
-          .filter((holiday) =>
-            holiday.date.startsWith(
-              `${year}-${String(month.getMonth() + 1).padStart(2, "0")}`,
-            ),
-          )
-          .map((holiday) => (
-            <small key={holiday.date}>
-              <b>{holiday.date.slice(8)}</b> {holiday.localName || holiday.name}
-            </small>
-          ))}
-      </div>
     </div>
   );
 }
@@ -501,15 +596,1132 @@ export default function Home() {
   }, [selected]);
 
   const update = (id: string, patch: Partial<Widget>) =>
-    setStoreχm{¶‰ΛkΊwµηM±…ΝΝ9…µ”υμ(€€€€€€€€€€€€€€€€€€€€€€€€€ΝΡ½Ι”ΉΝ•ΡΡ¥ΉΜΉΡ΅•µ”€τττΡ΅•µ”€ό€‰…Ρ¥Ω”€θ€(€€€€€€€€€€€€€€€€€€€€€€€τ(€€€€€€€€€€€€€€€€€€€€€€€½Ή±¥¬υμ ¤€τψ(€€€€€€€€€€€€€€€€€€€€€€€€€Ν•ΡMΡ½Ι” ΅Μ¤€τψ€΅μ(€€€€€€€€€€€€€€€€€€€€€€€€€€€€ΈΈΉΜ°(€€€€€€€€€€€€€€€€€€€€€€€€€€€Ν•ΡΡ¥ΉΜθμ€ΈΈΉΜΉΝ•ΡΡ¥ΉΜ°Ρ΅•µ”τ°(€€€€€€€€€€€€€€€€€€€€€€€€€τ¤¤(€€€€€€€€€€€€€€€€€€€€€€€τ(€€€€€€€€€€€€€€€€€€€€€€ψ(€€€€€€€€€€€€€€€€€€€€€€€€ρΝΑ…Έ±…ΝΝ9…µ”υνΡ΅•µ”µΝέ…Ρ €‘νΡ΅•µ•υτψ(€€€€€€€€€€€€€€€€€€€€€€€€€€ρ¤€Όψ(€€€€€€€€€€€€€€€€€€€€€€€€€€ρ¤€Όψ(€€€€€€€€€€€€€€€€€€€€€€€€€€ρ¤€Όψ(€€€€€€€€€€€€€€€€€€€€€€€€π½ΝΑ…Έψ(€€€€€€€€€€€€€€€€€€€€€€€€ρΝΡΙ½Ήψ(€€€€€€€€€€€€€€€€€€€€€€€€€νΡ΅•µ”€τττ€‰‘…Ι¬(€€€€€€€€€€€€€€€€€€€€€€€€€€€€ό€‹®.“¶°(€€€€€€€€€€€€€€€€€€€€€€€€€€€€θΡ΅•µ”€τττ€‰±¥΅Π(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ό€‹¶fS²vΣ¶*ΰ(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€θ€‹¶23²*“¶Pƒ®βS® ‰τ(€€€€€€€€€€€€€€€€€€€€€€€€π½ΝΡΙ½Ήψ(€€€€€€€€€€€€€€€€€€€€€€π½‰ΥΡΡ½Έψ(€€€€€€€€€€€€€€€€€€€€¤¥τ(€€€€€€€€€€€€€€€€€€π½‘¥Ψψ(€€€€€€€€€€€€€€€€πΌψ(€€€€€€€€€€€€€€¤€θ€ (€€€€€€€€€€€€€€€€πψ(€€€€€€€€€€€€€€€€€€ρ‘¥Ψ±…ΝΝ9…µ”τ‰Ν•ΡΡ¥ΉΜµ΅•…‘¥Ήψ(€€€€€€€€€€€€€€€€€€€€ρ‘¥Ψψ(€€€€€€€€€€€€€€€€€€€€€€ρΝµ…±°ω	-U@π½Νµ…±°ψ(€€€€€€€€€€€€€€€€€€€€€€ρ Θϋ®6Γ²vΣ¶ΐƒªÒ®°π½ Θψ(€€€€€€€€€€€€€€€€€€€€€€ρΐψ(€€€€€€€€€€€€€€€€€€€€€€€ƒ®2².s®ΞΣ®Npƒ²‚²ΚΠƒ®6Γ²vΣ¶Γ®–πƒ¶23²vσ®†pƒ®
-Σ®ΞΣ®
-ΣªΖΓ®
-`ƒ²vΣ²‚ƒ®ΒΗ²^²v(€€€€€€€€€€€€€€€€€€€€€€€ƒªΒ²‚γ²bΧ®.#®.Έ(€€€€€€€€€€€€€€€€€€€€€€π½ΐψ(€€€€€€€€€€€€€€€€€€€€π½‘¥Ψψ(€€€€€€€€€€€€€€€€€€π½‘¥Ψψ(€€€€€€€€€€€€€€€€€€ρ‘¥Ψ±…ΝΝ9…µ”τ‰‘…Ρ„µ…Ρ¥½ΉΜψ(€€€€€€€€€€€€€€€€€€€€ρ…ΙΡ¥±”ψ(€€€€€€€€€€€€€€€€€€€€€€ρΝΡΙ½Ήϋ®6Γ²vΣ¶ΐƒ®
-Σ®ΞΣ®
-Σªβΐπ½ΝΡΙ½Ήψ(€€€€€€€€€€€€€€€€€€€€€€ρΐϋ²n3¶³²*“¶:c²vΣ²*°ƒ²r²‚Ό°ƒ²“²‚W²v)M=8ƒ¶23²vσ®†pƒ²‚²z—¶V§®.#®.Έπ½ΐψ(€€€€€€€€€€€€€€€€€€€€€€ρ‰ΥΡΡ½Έ½Ή±¥¬υν•αΑ½ΙΡ)Ν½ΉτϋLaA=IPπ½‰ΥΡΡ½Έψ(€€€€€€€€€€€€€€€€€€€€π½…ΙΡ¥±”ψ(€€€€€€€€€€€€€€€€€€€€ρ…ΙΡ¥±”ψ(€€€€€€€€€€€€€€€€€€€€€€ρΝΡΙ½Ήϋ®6Γ²vΣ¶ΐƒªΒ²‚γ²b“ªβΐπ½ΝΡΙ½Ήψ(€€€€€€€€€€€€€€€€€€€€€€ρΐϋ²‚²z—¶VΠƒ®FP)M=8ƒ¶23²vσ®†pƒ¶b²z°ƒ®2².s®ΞΣ®Ns®–πƒ®ΞΧ²nC¶V§®.#®.Έπ½ΐψ(€€€€€€€€€€€€€€€€€€€€€€ρ‰ΥΡΡ½Έ½Ή±¥¬υμ ¤€τψ™¥±•I•ΉΥΙΙ•ΉΠόΉ±¥¬ ¥τψ(€€€€€€€€€€€€€€€€€€€€€€€ƒD%5A=IP(€€€€€€€€€€€€€€€€€€€€€€π½‰ΥΡΡ½Έψ(€€€€€€€€€€€€€€€€€€€€€€ρ¥ΉΑΥΠ(€€€€€€€€€€€€€€€€€€€€€€€Ι•υν™¥±•I•™τ(€€€€€€€€€€€€€€€€€€€€€€€΅¥‘‘•Έ(€€€€€€€€€€€€€€€€€€€€€€€ΡεΑ”τ‰™¥±”(€€€€€€€€€€€€€€€€€€€€€€€…•ΑΠτ‰…ΑΑ±¥…Ρ¥½Έ½©Ν½Έ(€€€€€€€€€€€€€€€€€€€€€€€½Ή΅…Ή”υμ΅”¤€τψ¥µΑ½ΙΡ)Ν½Έ΅”ΉΡ…Ι•ΠΉ™¥±•ΜόΉlΑt¥τ(€€€€€€€€€€€€€€€€€€€€€€Όψ(€€€€€€€€€€€€€€€€€€€€π½…ΙΡ¥±”ψ(€€€€€€€€€€€€€€€€€€π½‘¥Ψψ(€€€€€€€€€€€€€€€€πΌψ(€€€€€€€€€€€€€€¥τ(€€€€€€€€€€€€π½Ν•Ρ¥½Έψ(€€€€€€€€€€π½‘¥Ψψ(€€€€€€€€¤€θ€ (€€€€€€€€€€ρ‘¥Ψ(€€€€€€€€€€€±…ΝΝ9…µ”τ‰…ΉΩ…Μ(€€€€€€€€€€€Ι•υν…ΉΩ…ΝI•™τ(€€€€€€€€€€€½ΉA½¥ΉΡ•Ι½έΈυν‰•¥ΉM•±•Ρ¥½Ήτ(€€€€€€€€€€€ΝΡε±”υνμ(€€€€€€€€€€€€€΅•¥΅Πθ5…Ρ Ήµ…ΰ (€€€€€€€€€€€€€€€€ΨΤΐ°(€€€€€€€€€€€€€€€€ΈΈΉΩ¥Ν¥‰±•]¥‘•ΡΜΉµ…ΐ ΅ά¤€τψάΉ±…ε½ΥΠΉδ€¬άΉ±…ε½ΥΠΉ΅•¥΅Π€¬€ΰΐ¤°(€€€€€€€€€€€€€€¤°(€€€€€€€€€€€υτ(€€€€€€€€€€ψ(€€€€€€€€€€€νΝ•±•Ρ¥½Ή	½ΰ€€ (€€€€€€€€€€€€€€ρΝΑ…Έ(€€€€€€€€€€€€€€€±…ΝΝ9…µ”τ‰Ν•±•Ρ¥½Έµ‰½ΰ(€€€€€€€€€€€€€€€ΝΡε±”υνμ(€€€€€€€€€€€€€€€€€±•™ΠθΝ•±•Ρ¥½Ή	½ΰΉΰ°(€€€€€€€€€€€€€€€€€Ρ½ΐθΝ•±•Ρ¥½Ή	½ΰΉδ°(€€€€€€€€€€€€€€€€€έ¥‘Ρ θΝ•±•Ρ¥½Ή	½ΰΉέ¥‘Ρ °(€€€€€€€€€€€€€€€€€΅•¥΅ΠθΝ•±•Ρ¥½Ή	½ΰΉ΅•¥΅Π°(€€€€€€€€€€€€€€€υτ(€€€€€€€€€€€€€€Όψ(€€€€€€€€€€€€¥τ(€€€€€€€€€€€νΩ¥Ν¥‰±•]¥‘•ΡΜΉµ…ΐ ΅ά¤€τψ€ (€€€€€€€€€€€€€€ρ…ΙΡ¥±”(€€€€€€€€€€€€€€€­•δυνάΉ¥‘τ(€€€€€€€€€€€€€€€‘…Ρ„µ¥υνάΉ¥‘τ(€€€€€€€€€€€€€€€‘…Ρ„µΰυνάΉ±…ε½ΥΠΉατ(€€€€€€€€€€€€€€€‘…Ρ„µδυνάΉ±…ε½ΥΠΉετ(€€€€€€€€€€€€€€€‘…Ρ„µέ¥‘Ρ υνάΉ±…ε½ΥΠΉέ¥‘Ρ΅τ(€€€€€€€€€€€€€€€‘…Ρ„µ΅•¥΅ΠυνάΉ±…ε½ΥΠΉ΅•¥΅Ρτ(€€€€€€€€€€€€€€€‘…Ρ„µθυνάΉ±…ε½ΥΠΉι%Ή‘•ατ(€€€€€€€€€€€€€€€±…ΝΝ9…µ”υνέ¥‘•Π€‘νΝ•±•Ρ•Ή¥Ή±Υ‘•Μ΅άΉ¥¤€ό€‰Ν•±•Ρ•€θ€‰υτ(€€€€€€€€€€€€€€€ΝΡε±”υνμ(€€€€€€€€€€€€€€€€€ΡΙ…ΉΝ™½Ι΄θΡΙ…ΉΝ±…Ρ” ‘νάΉ±…ε½ΥΠΉαυΑΰ°€‘νάΉ±…ε½ΥΠΉευΑΰ¥€°(€€€€€€€€€€€€€€€€€έ¥‘Ρ θάΉ±…ε½ΥΠΉέ¥‘Ρ °(€€€€€€€€€€€€€€€€€΅•¥΅ΠθάΉ±…ε½ΥΠΉ΅•¥΅Π°(€€€€€€€€€€€€€€€€€ι%Ή‘•ΰθάΉ±…ε½ΥΠΉι%Ή‘•ΰ°(€€€€€€€€€€€€€€€€€‰½Ι‘•Ι½±½ΘθάΉΝΡε±”Ή‰½Ι‘•Ι½±½Θ°(€€€€€€€€€€€€€€€υτ(€€€€€€€€€€€€€€€½ΉA½¥ΉΡ•Ι½έΉ…ΑΡΥΙ”υμ΅”¤€τψμ(€€€€€€€€€€€€€€€€€¥€΅”Ή‰ΥΡΡ½Έ€„ττ€ΐ¤Ι•ΡΥΙΈμ(€€€€€€€€€€€€€€€€€½ΉΝΠΉ•αΡh€τ(€€€€€€€€€€€€€€€€€€€5…Ρ Ήµ…ΰ (€€€€€€€€€€€€€€€€€€€€€€ΐ°(€€€€€€€€€€€€€€€€€€€€€€ΈΈΉΝΡ½Ι”Ήέ¥‘•ΡΜΉµ…ΐ ΅¥Ρ•΄¤€τψ¥Ρ•΄Ή±…ε½ΥΠΉι%Ή‘•ΰ¤°(€€€€€€€€€€€€€€€€€€€€¤€¬€Δμ(€€€€€€€€€€€€€€€€€”ΉΥΙΙ•ΉΡQ…Ι•ΠΉΝΡε±”Ήι%Ή‘•ΰ€τMΡΙ¥Ή΅Ή•αΡh¤μ(€€€€€€€€€€€€€€€€€”ΉΥΙΙ•ΉΡQ…Ι•ΠΉ‘…Ρ…Ν•ΠΉθ€τMΡΙ¥Ή΅Ή•αΡh¤μ(€€€€€€€€€€€€€€€υτ(€€€€€€€€€€€€€€€½ΉA½¥ΉΡ•ΙUΐυμ΅”¤€τψμ(€€€€€€€€€€€€€€€€€½ΉΝΠΉ•αΡh€τ9Υµ‰•Θ΅”ΉΥΙΙ•ΉΡQ…Ι•ΠΉ‘…Ρ…Ν•ΠΉθρπ€Δ¤μ(€€€€€€€€€€€€€€€€€½ΉΝΠέ¥‘•Ρ%€τάΉ¥μ(€€€€€€€€€€€€€€€€€έ¥Ή‘½άΉΝ•ΡQ¥µ•½ΥΠ  ¤€τψμ(€€€€€€€€€€€€€€€€€€€Ν•ΡMΡ½Ι” ΅Μ¤€τψ€΅μ(€€€€€€€€€€€€€€€€€€€€€€ΈΈΉΜ°(€€€€€€€€€€€€€€€€€€€€€έ¥‘•ΡΜθΜΉέ¥‘•ΡΜΉµ…ΐ ΅¥Ρ•΄¤€τψ(€€€€€€€€€€€€€€€€€€€€€€€¥Ρ•΄Ή¥€τττέ¥‘•Ρ%(€€€€€€€€€€€€€€€€€€€€€€€€€€όμ(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ΈΈΉ¥Ρ•΄°(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€±…ε½ΥΠθμ€ΈΈΉ¥Ρ•΄Ή±…ε½ΥΠ°ι%Ή‘•ΰθΉ•αΡhτ°(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ΥΑ‘…Ρ•‘ΠθΉ½ά ¤°(€€€€€€€€€€€€€€€€€€€€€€€€€€€τ(€€€€€€€€€€€€€€€€€€€€€€€€€€θ¥Ρ•΄°(€€€€€€€€€€€€€€€€€€€€€€¤°(€€€€€€€€€€€€€€€€€€€τ¤¤μ(€€€€€€€€€€€€€€€€€τ°€ΐ¤μ(€€€€€€€€€€€€€€€υτ(€€€€€€€€€€€€€€€½Ή±¥¬υμ΅”¤€τψμ(€€€€€€€€€€€€€€€€€¥€ (€€€€€€€€€€€€€€€€€€€€΅”ΉΡ…Ι•Π…Μ!Q51±•µ•ΉΠ¤Ή±½Ν•ΝΠ ‰‰ΥΡΡ½Έ±„±¥ΉΑΥΠ±Ρ•αΡ…Ι•„¤(€€€€€€€€€€€€€€€€€€¤(€€€€€€€€€€€€€€€€€€€Ι•ΡΥΙΈμ(€€€€€€€€€€€€€€€€€¥€΅”ΉΡΙ±-•δ¤(€€€€€€€€€€€€€€€€€€€Ν•ΡM•±•Ρ• ΅Μ¤€τψ(€€€€€€€€€€€€€€€€€€€€€ΜΉ¥Ή±Υ‘•Μ΅άΉ¥¤(€€€€€€€€€€€€€€€€€€€€€€€€όΜΉ™¥±Ρ•Θ ΅¥¤€τψ¥€„ττάΉ¥¤(€€€€€€€€€€€€€€€€€€€€€€€€θlΈΈΉΜ°άΉ¥‘t°(€€€€€€€€€€€€€€€€€€€€¤μ(€€€€€€€€€€€€€€€€€•±Ν”¥€ …Ν•±•Ρ•Ή¥Ή±Υ‘•Μ΅άΉ¥¤¤Ν•ΡM•±•Ρ•΅mάΉ¥‘t¤μ(€€€€€€€€€€€€€€€υτ(€€€€€€€€€€€€€€ψ(€€€€€€€€€€€€€€€€ρ‘¥Ψ±…ΝΝ9…µ”τ‰έ¥‘•ΠµΡ½ΐ‘Ι…µ΅…Ή‘±”ψ(€€€€€€€€€€€€€€€€€€ρ%½ΈΡεΑ”υνάΉΡεΑ•τ€Όψ(€€€€€€€€€€€€€€€€€€ρΝΑ…ΈωνάΉΡεΑ”ΉΡ½UΑΑ•Ι…Ν” ¥τπ½ΝΑ…Έψ(€€€€€€€€€€€€€€€€€€ρ‘¥Ψ±…ΝΝ9…µ”τ‰έ¥‘•ΠµΡ½½±Μψ(€€€€€€€€€€€€€€€€€€€€ρ‰ΥΡΡ½Έ(€€€€€€€€€€€€€€€€€€€€€…Ι¥„µ±…‰•°τ‹²"c²‚T(€€€€€€€€€€€€€€€€€€€€€½ΉA½¥ΉΡ•Ι½έΈυμ΅”¤€τψ”ΉΝΡ½ΑAΙ½Α……Ρ¥½Έ ¥τ(€€€€€€€€€€€€€€€€€€€€€½Ή±¥¬υμ ¤€τψΝ•Ρ5½‘…°΅μΡεΑ”θάΉΡεΑ”°έ¥‘•Ρ%θάΉ¥τ¥τ(€€€€€€€€€€€€€€€€€€€€ψ(€€€€€€€€€€€€€€€€€€€€€ƒr8(€€€€€€€€€€€€€€€€€€€€π½‰ΥΡΡ½Έψ(€€€€€€€€€€€€€€€€€€€€ρ‰ΥΡΡ½Έ(€€€€€€€€€€€€€€€€€€€€€…Ι¥„µ±…‰•°τ‹®ΞΧ²‚p(€€€€€€€€€€€€€€€€€€€€€½ΉA½¥ΉΡ•Ι½έΈυμ΅”¤€τψ”ΉΝΡ½ΑAΙ½Α……Ρ¥½Έ ¥τ(€€€€€€€€€€€€€€€€€€€€€½Ή±¥¬υμ ¤€τψ(€€€€€€€€€€€€€€€€€€€€€€€Ν•ΡMΡ½Ι” ΅Μ¤€τψ€΅μ(€€€€€€€€€€€€€€€€€€€€€€€€€€ΈΈΉΜ°(€€€€€€€€€€€€€€€€€€€€€€€€€έ¥‘•ΡΜθl(€€€€€€€€€€€€€€€€€€€€€€€€€€€€ΈΈΉΜΉέ¥‘•ΡΜ°(€€€€€€€€€€€€€€€€€€€€€€€€€€€μ(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ΈΈΉά°(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€¥θΙεΑΡΌΉΙ…Ή‘½µUU% ¤°(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€±…ε½ΥΠθμ(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ΈΈΉάΉ±…ε½ΥΠ°(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ΰθάΉ±…ε½ΥΠΉΰ€¬€Θΐ°(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€δθάΉ±…ε½ΥΠΉδ€¬€Θΐ°(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€τ°(€€€€€€€€€€€€€€€€€€€€€€€€€€€τ°(€€€€€€€€€€€€€€€€€€€€€€€€€t°(€€€€€€€€€€€€€€€€€€€€€€€τ¤¤(€€€€€€€€€€€€€€€€€€€€€τ(€€€€€€€€€€€€€€€€€€€€ψ(€€€€€€€€€€€€€€€€€€€€€ƒ$(€€€€€€€€€€€€€€€€€€€€π½‰ΥΡΡ½Έψ(€€€€€€€€€€€€€€€€€€€€ρ‰ΥΡΡ½Έ(€€€€€€€€€€€€€€€€€€€€€…Ι¥„µ±…‰•°τ‹²
-·²‚p(€€€€€€€€€€€€€€€€€€€€€½ΉA½¥ΉΡ•Ι½έΈυμ΅”¤€τψ”ΉΝΡ½ΑAΙ½Α……Ρ¥½Έ ¥τ(€€€€€€€€€€€€€€€€€€€€€½Ή±¥¬υμ ¤€τψΙ•µ½Ω”΅άΉ¥¥τ(€€€€€€€€€€€€€€€€€€€€ψ(€€€€€€€€€€€€€€€€€€€€€ƒ\(€€€€€€€€€€€€€€€€€€€€π½‰ΥΡΡ½Έψ(€€€€€€€€€€€€€€€€€€π½‘¥Ψψ(€€€€€€€€€€€€€€€€π½‘¥Ψψ(€€€€€€€€€€€€€€€€ρ‘¥Ψ±…ΝΝ9…µ”τ‰έ¥‘•Πµ‰½‘δψ(€€€€€€€€€€€€€€€€€νάΉΡεΑ”€τττ€‰‰½½­µ…Ι¬€ό€ (€€€€€€€€€€€€€€€€€€€€ρ„(€€€€€€€€€€€€€€€€€€€€€±…ΝΝ9…µ”τ‰‰½½­µ…Ι¬µ½ΉΡ•ΉΠ(€€€€€€€€€€€€€€€€€€€€€΅Ι•υνάΉ‘…Ρ„ΉΥΙ±τ(€€€€€€€€€€€€€€€€€€€€€Ρ…Ι•Πτ‰}‰±…Ή¬(€€€€€€€€€€€€€€€€€€€€€Ι•°τ‰Ή½Ι•™•ΙΙ•Θ(€€€€€€€€€€€€€€€€€€€€ψ(€€€€€€€€€€€€€€€€€€€€€€ρ ΘωνάΉΡ¥Ρ±•τπ½ Θψ(€€€€€€€€€€€€€€€€€€€€€€ρΐ±…ΝΝ9…µ”τ‰ΥΙ°ωνάΉ‘…Ρ„ΉΥΙ±τπ½ΐψ(€€€€€€€€€€€€€€€€€€€€€€ρΝΑ…Έ±…ΝΝ9…µ”τ‰‰½½­µ…Ι¬µ½Α•Έω=A8IM=UIƒ\π½ΝΑ…Έψ(€€€€€€€€€€€€€€€€€€€€π½„ψ(€€€€€€€€€€€€€€€€€€¤€θ€ (€€€€€€€€€€€€€€€€€€€€πψ(€€€€€€€€€€€€€€€€€€€€€€ρ ΘωνάΉΡ¥Ρ±•τπ½ Θψ(€€€€€€€€€€€€€€€€€€€€€νάΉΡεΑ”€τττ€‰Ή½Ρ”€€ (€€€€€€€€€€€€€€€€€€€€€€€€ρΡ•αΡ…Ι•„(€€€€€€€€€€€€€€€€€€€€€€€€€…Ι¥„µ±…‰•°υν€‘νάΉΡ¥Ρ±•τƒ®
-Σ²j¥τ(€€€€€€€€€€€€€€€€€€€€€€€€€Ω…±Υ”υνάΉ‘…Ρ„Ή‰½‘δρπ€‰τ(€€€€€€€€€€€€€€€€€€€€€€€€€Ι•…‘=Ή±δ(€€€€€€€€€€€€€€€€€€€€€€€€Όψ(€€€€€€€€€€€€€€€€€€€€€€¥τ(€€€€€€€€€€€€€€€€€€€€€νάΉΡεΑ”€τττ€‰Ρ½‘Ό€€ (€€€€€€€€€€€€€€€€€€€€€€€€ρ‘¥Ψ±…ΝΝ9…µ”τ‰Ρ½‘Όµ™½½Ρ•Θψ(€€€€€€€€€€€€€€€€€€€€€€€€€€ρ±…‰•°±…ΝΝ9…µ”τ‰Ρ½‘Όψ(€€€€€€€€€€€€€€€€€€€€€€€€€€€€ρ¥ΉΑΥΠ(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ΡεΑ”τ‰΅•­‰½ΰ(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€΅•­•υμ„…άΉ‘…Ρ„Ή‘½Ή•τ(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€½Ή΅…Ή”υμ΅”¤€τψ(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ΥΑ‘…Ρ”΅άΉ¥°μ(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€‘…Ρ„θμ€ΈΈΉάΉ‘…Ρ„°‘½Ή”θ”ΉΡ…Ι•ΠΉ΅•­•τ°(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€τ¤(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€τ(€€€€€€€€€€€€€€€€€€€€€€€€€€€€Όψ(€€€€€€€€€€€€€€€€€€€€€€€€€€€€ρΝΑ…Έ±…ΝΝ9…µ”υνάΉ‘…Ρ„Ή‘½Ή”€ό€‰‘½Ή”€θ€‰τψ(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€νάΉ‘…Ρ„Ή‘½Ή”€ό€‰=5A1Q€θ€‰%8AI=IML‰τ(€€€€€€€€€€€€€€€€€€€€€€€€€€€€π½ΝΑ…Έψ(€€€€€€€€€€€€€€€€€€€€€€€€€€π½±…‰•°ψ(€€€€€€€€€€€€€€€€€€€€€€€€€€ρΝΑ…Έ±…ΝΝ9…µ”τ‰Ρ½‘Όµ‘Υ”ψ(€€€€€€€€€€€€€€€€€€€€€€€€€€€νάΉ‘…Ρ„Ή‘Υ”ρπ€‰9<1%9‰τ(€€€€€€€€€€€€€€€€€€€€€€€€€€π½ΝΑ…Έψ(€€€€€€€€€€€€€€€€€€€€€€€€€€ρΝΑ…Έ(€€€€€€€€€€€€€€€€€€€€€€€€€€€±…ΝΝ9…µ”υνΑΙ¥½Ι¥Ρδ€‘νάΉ‘…Ρ„ΉΑΙ¥½Ι¥ΡδόΉΡ½1½έ•Ι…Ν” ¥υτ(€€€€€€€€€€€€€€€€€€€€€€€€€€ψ(€€€€€€€€€€€€€€€€€€€€€€€€€€€νάΉ‘…Ρ„ΉΑΙ¥½Ι¥Ρετ(€€€€€€€€€€€€€€€€€€€€€€€€€€π½ΝΑ…Έψ(€€€€€€€€€€€€€€€€€€€€€€€€π½‘¥Ψψ(€€€€€€€€€€€€€€€€€€€€€€¥τ(€€€€€€€€€€€€€€€€€€€€€νάΉΡεΑ”€τττ€‰έ•…Ρ΅•Θ€€ (€€€€€€€€€€€€€€€€€€€€€€€€ρ]•…Ρ΅•Ι]¥‘•Π¥Ρε%υνάΉ‘…Ρ„Ή¥Ρδρπ€‰Ν•½Υ°‰τ€Όψ(€€€€€€€€€€€€€€€€€€€€€€¥τ(€€€€€€€€€€€€€€€€€€€€€νάΉΡεΑ”€τττ€‰…±•Ή‘…Θ€€ρ…±•Ή‘…Ι]¥‘•Π€Όωτ(€€€€€€€€€€€€€€€€€€€€πΌψ(€€€€€€€€€€€€€€€€€€¥τ(€€€€€€€€€€€€€€€€π½‘¥Ψψ(€€€€€€€€€€€€€€€€ρΝΑ…Έ±…ΝΝ9…µ”τ‰Ι•Ν¥ι”µ½ΙΉ•Θ€Όψ(€€€€€€€€€€€€€€π½…ΙΡ¥±”ψ(€€€€€€€€€€€€¤¥τ(€€€€€€€€€€π½‘¥Ψψ(€€€€€€€€¥τ(€€€€€€π½Ν•Ρ¥½Έψ(€€€€€€ρ™½½Ρ•Θψ(€€€€€€€€ρΝΑ…Έψ(€€€€€€€€€1=0MQ=I€ρωQ%Yπ½ψ(€€€€€€€€π½ΝΑ…Έψ(€€€€€€€€ρΝΑ…ΈωQMQeL=8Q!%LY%π½ΝΑ…Έψ(€€€€€€€€ρΝΑ…ΈωMMdM!	=Iƒ
-άXΔΈΐΈΔπ½ΝΑ…Έψ(€€€€€€π½™½½Ρ•Θψ(€€€€€νµ½‘…°€€ (€€€€€€€€ρ‘¥Ψ(€€€€€€€€€±…ΝΝ9…µ”τ‰µ½‘…°µ‰…­‘Ι½ΐ(€€€€€€€€€½Ή5½ΥΝ•½έΈυμ΅”¤€τψ”ΉΡ…Ι•Π€τττ”ΉΥΙΙ•ΉΡQ…Ι•Π€Ν•Ρ5½‘…°΅ΉΥ±°¥τ(€€€€€€€€ψ(€€€€€€€€€€ρ™½Ι΄±…ΝΝ9…µ”τ‰µ½‘…°½ΉMΥ‰µ¥Πυν…‘‘]¥‘•Ρτψ(€€€€€€€€€€€€ρ‘¥Ψψ(€€€€€€€€€€€€€€ρΝΑ…Έψ(€€€€€€€€€€€€€€€νµ½‘…±]¥‘•Π€ό€‰%P€θ€‰9\‰τ€Όνµ½‘…°ΉΡεΑ”ΉΡ½UΑΑ•Ι…Ν” ¥τ(€€€€€€€€€€€€€€π½ΝΑ…Έψ(€€€€€€€€€€€€€€ρ‰ΥΡΡ½ΈΡεΑ”τ‰‰ΥΡΡ½Έ½Ή±¥¬υμ ¤€τψΝ•Ρ5½‘…°΅ΉΥ±°¥τψ(€€€€€€€€€€€€€€€ƒ\(€€€€€€€€€€€€€€π½‰ΥΡΡ½Έψ(€€€€€€€€€€€€π½‘¥Ψψ(€€€€€€€€€€€€ρ Θψ(€€€€€€€€€€€€€νµ½‘…±]¥‘•Π(€€€€€€€€€€€€€€€€ό€‹²r²‚Όƒ²"c²‚T(€€€€€€€€€€€€€€€€θƒ² €‘νµ½‘…°ΉΡεΑ”€τττ€‰‰½½­µ…Ι¬€ό€‹®Ϊ®#¶°€θµ½‘…°ΉΡεΑ”€τττ€‰Ή½Ρ”€ό€‹®¦S®ª €θµ½‘…°ΉΡεΑ”€τττ€‰Ρ½‘Ό€ό€‹¶V€ƒ²vπ€θµ½‘…°ΉΡεΑ”€τττ€‰έ•…Ρ΅•Θ€ό€‹®
-ƒ²R €θ€‹®.³®‚”‰υτ(€€€€€€€€€€€€π½ Θψ(€€€€€€€€€€€€ρ±…‰•°ψ(€€€€€€€€€€€€€ƒ²‚s®ª¤(€€€€€€€€€€€€€€ρ¥ΉΑΥΠ(€€€€€€€€€€€€€€€Ή…µ”τ‰Ρ¥Ρ±”(€€€€€€€€€€€€€€€Ι•ΕΥ¥Ι•(€€€€€€€€€€€€€€€…ΥΡ½½ΥΜ(€€€€€€€€€€€€€€€‘•™…Υ±ΡY…±Υ”υνµ½‘…±]¥‘•ΠόΉΡ¥Ρ±•τ(€€€€€€€€€€€€€€€Α±…•΅½±‘•Θτ‹²‚s®ª§²vƒ²z®‚—¶Vc²γ²jP(€€€€€€€€€€€€€€Όψ(€€€€€€€€€€€€π½±…‰•°ψ(€€€€€€€€€€€€ρ±…‰•°ψ(€€€€€€€€€€€€€ƒ²r²‚Όƒ¶³ªβΐ(€€€€€€€€€€€€€€ρΝ•±•Π(€€€€€€€€€€€€€€€Ή…µ”τ‰Ν¥ι•AΙ•Ν•Π(€€€€€€€€€€€€€€€‘•™…Υ±ΡY…±Υ”υμ(€€€€€€€€€€€€€€€€€µ½‘…±]¥‘•Π€ό€€θΝΡ½Ι”ΉΝ•ΡΡ¥ΉΜΉΝ¥ι•AΙ•Ν•ΡΝlΑtΉ¥(€€€€€€€€€€€€€€€τ(€€€€€€€€€€€€€€ψ(€€€€€€€€€€€€€€€νµ½‘…±]¥‘•Π€€ρ½ΑΡ¥½ΈΩ…±Υ”τϋ®ΞªΚτƒ²V ƒ¶V π½½ΑΡ¥½Έωτ(€€€€€€€€€€€€€€€νΝΡ½Ι”ΉΝ•ΡΡ¥ΉΜΉΝ¥ι•AΙ•Ν•ΡΜΉµ…ΐ ΅ΑΙ•Ν•Π¤€τψ€ (€€€€€€€€€€€€€€€€€€ρ½ΑΡ¥½Έ­•δυνΑΙ•Ν•ΠΉ¥‘τΩ…±Υ”υνΑΙ•Ν•ΠΉ¥‘τψ(€€€€€€€€€€€€€€€€€€€νΑΙ•Ν•ΠΉΉ…µ•τƒ
-άνΑΙ•Ν•ΠΉέ¥‘Ρ΅χ]νΑΙ•Ν•ΠΉ΅•¥΅Ρτ(€€€€€€€€€€€€€€€€€€π½½ΑΡ¥½Έψ(€€€€€€€€€€€€€€€€¤¥τ(€€€€€€€€€€€€€€π½Ν•±•Πψ(€€€€€€€€€€€€π½±…‰•°ψ(€€€€€€€€€€€νµ½‘…±]¥‘•Π€€ (€€€€€€€€€€€€€€ρ±…‰•°ψ(€€€€€€€€€€€€€€€ƒ²n3¶³²*“¶:c²vΣ²*(€€€€€€€€€€€€€€€€ρΝ•±•Π(€€€€€€€€€€€€€€€€€Ή…µ”τ‰έ½Ι­ΝΑ…•%(€€€€€€€€€€€€€€€€€‘•™…Υ±ΡY…±Υ”υνµ½‘…±]¥‘•ΠΉέ½Ι­ΝΑ…•%‘τ(€€€€€€€€€€€€€€€€ψ(€€€€€€€€€€€€€€€€€νΝΡ½Ι”Ήέ½Ι­ΝΑ…•ΜΉµ…ΐ ΅έ½Ι­ΝΑ…”¤€τψ€ (€€€€€€€€€€€€€€€€€€€€ρ½ΑΡ¥½Έ­•δυνέ½Ι­ΝΑ…”Ή¥‘τΩ…±Υ”υνέ½Ι­ΝΑ…”Ή¥‘τψ(€€€€€€€€€€€€€€€€€€€€€νέ½Ι­ΝΑ…”ΉΉ…µ•τ(€€€€€€€€€€€€€€€€€€€€π½½ΑΡ¥½Έψ(€€€€€€€€€€€€€€€€€€¤¥τ(€€€€€€€€€€€€€€€€π½Ν•±•Πψ(€€€€€€€€€€€€€€π½±…‰•°ψ(€€€€€€€€€€€€¥τ(€€€€€€€€€€€€ρ±…‰•°ψ(€€€€€€€€€€€€€ƒ¶3®FC®°ƒ²'²(€€€€€€€€€€€€€€ρ¥ΉΑΥΠ(€€€€€€€€€€€€€€€±…ΝΝ9…µ”τ‰½±½Θµ¥ΉΑΥΠ(€€€€€€€€€€€€€€€Ή…µ”τ‰‰½Ι‘•Ι½±½Θ(€€€€€€€€€€€€€€€ΡεΑ”τ‰½±½Θ(€€€€€€€€€€€€€€€‘•™…Υ±ΡY…±Υ”υμ(€€€€€€€€€€€€€€€€€µ½‘…±]¥‘•ΠόΉΝΡε±”Ή‰½Ι‘•Ι½±½Θρπ(€€€€€€€€€€€€€€€€€ΝΡ½Ι”ΉΝ•ΡΡ¥ΉΜΉέ¥‘•Ρ½±½ΙΝmµ½‘…°ΉΡεΑ•t(€€€€€€€€€€€€€€€τ(€€€€€€€€€€€€€€Όψ(€€€€€€€€€€€€π½±…‰•°ψ(€€€€€€€€€€€μ΅µ½‘…°ΉΡεΑ”€τττ€‰‰½½­µ…Ι¬ρπµ½‘…°ΉΡεΑ”€τττ€‰Ή½Ρ”¤€€ (€€€€€€€€€€€€€€ρ±…‰•°ψ(€€€€€€€€€€€€€€€νµ½‘…°ΉΡεΑ”€τττ€‰‰½½­µ…Ι¬€ό€‰UI0€θ€‹®
-Σ²j¤‰τ(€€€€€€€€€€€€€€€νµ½‘…°ΉΡεΑ”€τττ€‰Ή½Ρ”€ό€ (€€€€€€€€€€€€€€€€€€ρΡ•αΡ…Ι•„(€€€€€€€€€€€€€€€€€€€Ή…µ”τ‰½ΉΡ•ΉΠ(€€€€€€€€€€€€€€€€€€€Ι½έΜυμΥτ(€€€€€€€€€€€€€€€€€€€‘•™…Υ±ΡY…±Υ”υνµ½‘…±]¥‘•ΠόΉ‘…Ρ„Ή‰½‘ετ(€€€€€€€€€€€€€€€€€€€Α±…•΅½±‘•Θτ‹®¦S®ª£®–πƒ²z®‚—¶Vc²γ²jP(€€€€€€€€€€€€€€€€€€Όψ(€€€€€€€€€€€€€€€€¤€θ€ (€€€€€€€€€€€€€€€€€€ρ¥ΉΑΥΠ(€€€€€€€€€€€€€€€€€€€Ή…µ”τ‰½ΉΡ•ΉΠ(€€€€€€€€€€€€€€€€€€€ΡεΑ”τ‰ΥΙ°(€€€€€€€€€€€€€€€€€€€‘•™…Υ±ΡY…±Υ”υνµ½‘…±]¥‘•ΠόΉ‘…Ρ„ΉΥΙ°ρπ€‰΅ΡΡΑΜθΌΌ‰τ(€€€€€€€€€€€€€€€€€€€Ι•ΕΥ¥Ι•(€€€€€€€€€€€€€€€€€€Όψ(€€€€€€€€€€€€€€€€¥τ(€€€€€€€€€€€€€€π½±…‰•°ψ(€€€€€€€€€€€€¥τ(€€€€€€€€€€€νµ½‘…°ΉΡεΑ”€τττ€‰έ•…Ρ΅•Θ€€ (€€€€€€€€€€€€€€ρ±…‰•°ψ(€€€€€€€€€€€€€€€ƒ²²^΄(€€€€€€€€€€€€€€€€ρΝ•±•Π(€€€€€€€€€€€€€€€€€Ή…µ”τ‰¥Ρδ(€€€€€€€€€€€€€€€€€‘•™…Υ±ΡY…±Υ”υνµ½‘…±]¥‘•ΠόΉ‘…Ρ„Ή¥Ρδρπ€‰Ν•½Υ°‰τ(€€€€€€€€€€€€€€€€ψ(€€€€€€€€€€€€€€€€€ν-=I9}%Q%LΉµ…ΐ ΅¥Ρδ¤€τψ€ (€€€€€€€€€€€€€€€€€€€€ρ½ΑΡ¥½Έ­•δυν¥ΡδΉ¥‘τΩ…±Υ”υν¥ΡδΉ¥‘τψ(€€€€€€€€€€€€€€€€€€€€€ν¥ΡδΉΉ…µ•τ(€€€€€€€€€€€€€€€€€€€€π½½ΑΡ¥½Έψ(€€€€€€€€€€€€€€€€€€¤¥τ(€€€€€€€€€€€€€€€€π½Ν•±•Πψ(€€€€€€€€€€€€€€π½±…‰•°ψ(€€€€€€€€€€€€¥τ(€€€€€€€€€€€νµ½‘…°ΉΡεΑ”€τττ€‰Ρ½‘Ό€€ (€€€€€€€€€€€€€€πψ(€€€€€€€€€€€€€€€€ρ±…‰•°ψ(€€€€€€€€€€€€€€€€€ƒ®#ªΒC²vπ(€€€€€€€€€€€€€€€€€€ρ¥ΉΑΥΠ(€€€€€€€€€€€€€€€€€€€Ή…µ”τ‰‘Υ”(€€€€€€€€€€€€€€€€€€€ΡεΑ”τ‰‘…Ρ”(€€€€€€€€€€€€€€€€€€€‘•™…Υ±ΡY…±Υ”υμ(€€€€€€€€€€€€€€€€€€€€€µ½‘…±]¥‘•ΠόΉ‘…Ρ„Ή‘Υ”ρπ(€€€€€€€€€€€€€€€€€€€€€Ή•ά…Ρ” ¤ΉΡ½%M=MΡΙ¥Ή ¤ΉΝ±¥” ΐ°€Δΐ¤(€€€€€€€€€€€€€€€€€€€τ(€€€€€€€€€€€€€€€€€€€½Ή±¥¬υμ΅”¤€τψ”ΉΥΙΙ•ΉΡQ…Ι•ΠΉΝ΅½έA¥­•ΘόΈ ¥τ(€€€€€€€€€€€€€€€€€€Όψ(€€€€€€€€€€€€€€€€π½±…‰•°ψ(€€€€€€€€€€€€€€€€ρ±…‰•°ψ(€€€€€€€€€€€€€€€€€ƒ²jΓ²ƒ²"s²r(€€€€€€€€€€€€€€€€€€ρΝ•±•Π(€€€€€€€€€€€€€€€€€€€Ή…µ”τ‰ΑΙ¥½Ι¥Ρδ(€€€€€€€€€€€€€€€€€€€‘•™…Υ±ΡY…±Υ”υνµ½‘…±]¥‘•ΠόΉ‘…Ρ„ΉΑΙ¥½Ι¥Ρδρπ€‰5%U4‰τ(€€€€€€€€€€€€€€€€€€ψ(€€€€€€€€€€€€€€€€€€€€ρ½ΑΡ¥½Έω!% π½½ΑΡ¥½Έψ(€€€€€€€€€€€€€€€€€€€€ρ½ΑΡ¥½Έω5%U4π½½ΑΡ¥½Έψ(€€€€€€€€€€€€€€€€€€€€ρ½ΑΡ¥½Έω1=\π½½ΑΡ¥½Έψ(€€€€€€€€€€€€€€€€€€π½Ν•±•Πψ(€€€€€€€€€€€€€€€€π½±…‰•°ψ(€€€€€€€€€€€€€€πΌψ(€€€€€€€€€€€€¥τ(€€€€€€€€€€€€ρ‘¥Ψ±…ΝΝ9…µ”τ‰µ½‘…°µ…Ρ¥½ΉΜψ(€€€€€€€€€€€€€€ρ‰ΥΡΡ½ΈΡεΑ”τ‰‰ΥΡΡ½Έ½Ή±¥¬υμ ¤€τψΝ•Ρ5½‘…°΅ΉΥ±°¥τψ(€€€€€€€€€€€€€€€90(€€€€€€€€€€€€€€π½‰ΥΡΡ½Έψ(€€€€€€€€€€€€€€ρ‰ΥΡΡ½ΈΡεΑ”τ‰ΝΥ‰µ¥Πψ(€€€€€€€€€€€€€€€νµ½‘…±]¥‘•Π€ό€‰MY!9L€θ€‰IQ]%P‰τ(€€€€€€€€€€€€€€π½‰ΥΡΡ½Έψ(€€€€€€€€€€€€π½‘¥Ψψ(€€€€€€€€€€π½™½Ι΄ψ(€€€€€€€€π½‘¥Ψψ(€€€€€€¥τ(€€€€€νΡ½…ΝΠ€€ (€€€€€€€€ρ‘¥Ψ±…ΝΝ9…µ”τ‰Ρ½…ΝΠΙ½±”τ‰ΝΡ…ΡΥΜψ(€€€€€€€€€νΡ½…ΝΡτ(€€€€€€€€π½‘¥Ψψ(€€€€€€¥τ(€€€€π½µ…¥Έψ(€€¤μ)τ(
+    setStore((s) => ({
+      ...s,
+      widgets: s.widgets.map((w) =>
+        w.id === id ? { ...w, ...patch, updatedAt: now() } : w,
+      ),
+    }));
+  const updateLayout = (id: string, layout: Partial<Layout>) =>
+    setStore((s) => ({
+      ...s,
+      widgets: s.widgets.map((w) =>
+        w.id === id
+          ? { ...w, layout: { ...w.layout, ...layout }, updatedAt: now() }
+          : w,
+      ),
+    }));
+
+  useEffect(() => {
+    const selector = ".widget";
+    if (!canvasRef.current) {
+      interact(selector).unset();
+      return;
+    }
+    interact(selector)
+      .draggable({
+        allowFrom: ".drag-handle",
+        listeners: {
+          start(e) {
+            const id = (e.target as HTMLElement).dataset.id || "";
+            dragIdsRef.current = selectedRef.current.includes(id)
+              ? selectedRef.current
+              : [id];
+            if (!selectedRef.current.includes(id)) {
+              selectedRef.current = [id];
+              setSelected([id]);
+            }
+            document.body.classList.add("is-dragging");
+          },
+          move(e) {
+            for (const id of dragIdsRef.current) {
+              const target = canvasRef.current?.querySelector<HTMLElement>(
+                `[data-id="${id}"]`,
+              );
+              if (!target) continue;
+              const nextX = Number(target.dataset.x || 0) + e.dx;
+              const nextY = Math.max(0, Number(target.dataset.y || 0) + e.dy);
+              target.style.transform = `translate(${nextX}px, ${nextY}px)`;
+              target.dataset.x = String(nextX);
+              target.dataset.y = String(nextY);
+            }
+          },
+          end() {
+            const positions = new Map(
+              dragIdsRef.current.map((id) => {
+                const el = canvasRef.current?.querySelector<HTMLElement>(
+                  `[data-id="${id}"]`,
+                );
+                return [
+                  id,
+                  {
+                    x: Number(el?.dataset.x || 0),
+                    y: Number(el?.dataset.y || 0),
+                  },
+                ] as const;
+              }),
+            );
+            setStore((s) => ({
+              ...s,
+              widgets: s.widgets.map((w) =>
+                positions.has(w.id)
+                  ? {
+                      ...w,
+                      layout: { ...w.layout, ...positions.get(w.id)! },
+                      updatedAt: now(),
+                    }
+                  : w,
+              ),
+            }));
+            document.body.classList.remove("is-dragging");
+          },
+        },
+      })
+      .resizable({
+        edges: { right: ".resize-corner", bottom: ".resize-corner" },
+        modifiers: [
+          interact.modifiers.restrictSize({ min: { width: 240, height: 150 } }),
+        ],
+        listeners: {
+          move(e) {
+            const target = e.target as HTMLElement;
+            const x = Number(target.dataset.x || 0) + e.deltaRect.left;
+            const y = Math.max(
+              0,
+              Number(target.dataset.y || 0) + e.deltaRect.top,
+            );
+            target.style.width = `${e.rect.width}px`;
+            target.style.height = `${e.rect.height}px`;
+            target.style.transform = `translate(${x}px, ${y}px)`;
+            target.dataset.x = String(x);
+            target.dataset.y = String(y);
+            target.dataset.width = String(e.rect.width);
+            target.dataset.height = String(e.rect.height);
+          },
+          end(e) {
+            const target = e.target as HTMLElement;
+            updateLayout(target.dataset.id || "", {
+              x: Number(target.dataset.x || 0),
+              y: Number(target.dataset.y || 0),
+              width: Number(target.dataset.width || 0),
+              height: Number(target.dataset.height || 0),
+            });
+          },
+        },
+      });
+    return () => {
+      interact(selector).unset();
+      document.body.classList.remove("is-dragging");
+    };
+  }, [settingsOpen, store.settings.grid, store.widgets]);
+
+  const visibleWidgets = useMemo(
+    () =>
+      store.widgets.filter((w) => w.workspaceId === store.activeWorkspaceId),
+    [store.widgets, store.activeWorkspaceId],
+  );
+  const modalWidget = modal?.widgetId
+    ? store.widgets.find((w) => w.id === modal.widgetId)
+    : undefined;
+  const counts = useMemo(
+    () => ({
+      todo: visibleWidgets.filter((w) => w.type === "todo" && !w.data.done)
+        .length,
+      bookmark: visibleWidgets.filter((w) => w.type === "bookmark").length,
+    }),
+    [visibleWidgets],
+  );
+  const addWidget = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const type = modal!.type;
+    const title = String(
+      form.get("title") || (type === "calendar" ? "λ‹¬λ ¥" : "μƒ μ„μ ―"),
+    );
+    const borderColor = String(form.get("borderColor") || "#303b47");
+    const presetId = String(form.get("sizePreset") || "");
+    const workspaceId = String(form.get("workspaceId") || "");
+    const data =
+      type === "weather"
+        ? {
+            locationName: String(form.get("locationName") || "μ„μΈ"),
+            latitude: Number(form.get("latitude") || 37.5665),
+            longitude: Number(form.get("longitude") || 126.978),
+          }
+        : type === "calendar"
+          ? {}
+          : type === "bookmark"
+            ? { url: String(form.get("content") || "https://") }
+            : type === "note"
+              ? { body: String(form.get("content") || "") }
+              : {
+                  done: modalWidget?.data.done || false,
+                  due: String(form.get("due") || ""),
+                  priority: String(form.get("priority") || "MEDIUM"),
+                };
+    if (modal?.widgetId) {
+      setStore((s) => {
+        const preset = s.settings.sizePresets.find((p) => p.id === presetId);
+        return {
+          ...s,
+          widgets: s.widgets.map((w) =>
+            w.id === modal.widgetId
+              ? {
+                  ...w,
+                  title,
+                  data,
+                  workspaceId: workspaceId || w.workspaceId,
+                  style: { borderColor },
+                  layout: preset
+                    ? {
+                        ...w.layout,
+                        width: preset.width,
+                        height: preset.height,
+                      }
+                    : w.layout,
+                  updatedAt: now(),
+                }
+              : w,
+          ),
+        };
+      });
+      setToast("μ„μ ―μ„ μμ •ν–μµλ‹λ‹¤.");
+    } else {
+      setStore((s) => {
+        const preset =
+          s.settings.sizePresets.find((p) => p.id === presetId) ||
+          s.settings.sizePresets[0];
+        return {
+          ...s,
+          widgets: [
+            ...s.widgets,
+            {
+              ...make(
+                type,
+                title,
+                80 + (visibleWidgets.length % 4) * 40,
+                80 + (visibleWidgets.length % 5) * 40,
+                data,
+              ),
+              workspaceId: s.activeWorkspaceId,
+              style: {
+                borderColor:
+                  borderColor === "#303b47"
+                    ? s.settings.widgetColors[type]
+                    : borderColor,
+              },
+              layout: {
+                ...make(type, title, 0, 0, data).layout,
+                x: 80 + (visibleWidgets.length % 4) * 40,
+                y: 80 + (visibleWidgets.length % 5) * 40,
+                width: preset.width,
+                height: preset.height,
+              },
+            },
+          ],
+        };
+      });
+      setToast("μ„μ ―μ„ μ¶”κ°€ν–μµλ‹λ‹¤.");
+    }
+    setModal(null);
+  };
+  const remove = (id: string) => {
+    if (!confirm("μ΄ μ„μ ―μ„ μ‚­μ ν• κΉμ”?")) return;
+    const before = store.widgets.find((w) => w.id === id);
+    setStore((s) => ({ ...s, widgets: s.widgets.filter((w) => w.id !== id) }));
+    setToast("μ‚­μ ν–μµλ‹λ‹¤. λλλ¦¬λ ¤λ©΄ Ctrl+Z λ€μ‹  λ°±μ—…μ„ ν™μ©ν•΄μ£Όμ„Έμ”.");
+    if (!before) return;
+  };
+  const exportJson = () => {
+    const blob = new Blob(
+      [JSON.stringify({ ...store, exportedAt: now() }, null, 2)],
+      { type: "application/json" },
+    );
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `ssafy-dashboard-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  const importJson = async (file?: File) => {
+    if (!file) return;
+    try {
+      const parsed = normalizeStore(JSON.parse(await file.text()));
+      if (!confirm("ν„μ¬ λ°μ΄ν„°λ¥Ό λ°±μ—… νμΌ λ‚΄μ©μΌλ΅ κµμ²΄ν• κΉμ”?")) return;
+      setStore(parsed);
+      setToast("μ›ν¬μ¤νμ΄μ¤λ¥Ό λ³µμ›ν–μµλ‹λ‹¤.");
+    } catch {
+      setToast("μ ν¨ν•μ§€ μ•μ€ λ°±μ—… νμΌμ…λ‹λ‹¤. κΈ°μ΅΄ λ°μ΄ν„°λ” μ μ§€λ©λ‹λ‹¤.");
+    }
+  };
+  const beginSelection = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || event.target !== event.currentTarget) return;
+    const canvas = event.currentTarget;
+    const rect = canvas.getBoundingClientRect();
+    const start = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    const base = event.ctrlKey ? selected : [];
+    const move = (e: PointerEvent) => {
+      const current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      const box = {
+        x: Math.min(start.x, current.x),
+        y: Math.min(start.y, current.y),
+        width: Math.abs(current.x - start.x),
+        height: Math.abs(current.y - start.y),
+      };
+      setSelectionBox(box);
+      const hits = visibleWidgets
+        .filter(
+          (w) =>
+            w.layout.x < box.x + box.width &&
+            w.layout.x + w.layout.width > box.x &&
+            w.layout.y < box.y + box.height &&
+            w.layout.y + w.layout.height > box.y,
+        )
+        .map((w) => w.id);
+      setSelected([...new Set([...base, ...hits])]);
+    };
+    const end = () => {
+      setSelectionBox(null);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", end);
+    };
+    if (!event.ctrlKey) setSelected([]);
+    setSelectionBox({ x: start.x, y: start.y, width: 0, height: 0 });
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end);
+  };
+
+  return (
+    <main data-theme={store.settings.theme}>
+      <header className="topbar">
+        <div className="brand">
+          <span className="prompt">&gt;_</span>
+          <div>
+            <strong>
+              SSAFY <em>DASHBOARD</em>
+            </strong>
+            <small>PERSONAL DEV WORKSPACE</small>
+          </div>
+        </div>
+      </header>
+      <section className="commandbar">
+        <div className="status">
+          <span className="online" />
+          SYSTEM ONLINE <span className="slash">{"//"}</span>{" "}
+          <b>{store.widgets.length}</b> WIDGETS{" "}
+          <span className="slash">{"//"}</span> AUTO-SAVED
+        </div>
+        <div className="actions">
+          <button onClick={() => setModal({ type: "bookmark" })}>
+            + BOOKMARK
+          </button>
+          <button onClick={() => setModal({ type: "note" })}>+ NOTE</button>
+          <button onClick={() => setModal({ type: "todo" })}>+ TODO</button>
+          <button onClick={() => setModal({ type: "weather" })}>
+            + WEATHER
+          </button>
+          <button onClick={() => setModal({ type: "calendar" })}>
+            + CALENDAR
+          </button>
+        </div>
+      </section>
+      <section className="stats" aria-label="μ”μ•½">
+        <div className="datetime">
+          <span>
+            {new Intl.DateTimeFormat("ko-KR", {
+              month: "short",
+              day: "2-digit",
+              weekday: "short",
+            }).format(clock)}
+          </span>
+          <b>
+            {new Intl.DateTimeFormat("ko-KR", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: false,
+            }).format(clock)}
+          </b>
+          <small>{clock.getFullYear()}</small>
+        </div>
+        <article>
+          <span>OPEN TASKS</span>
+          <b>{String(counts.todo).padStart(2, "0")}</b>
+          <i>FOCUS</i>
+        </article>
+        <article>
+          <span>BOOKMARKS</span>
+          <b>{String(counts.bookmark).padStart(2, "0")}</b>
+          <i>LINKS</i>
+        </article>
+        <article>
+          <span>SELECTED</span>
+          <b>{String(selected.length).padStart(2, "0")}</b>
+          <i>WIDGETS</i>
+        </article>
+        <div className="quote">
+          <textarea
+            aria-label="μƒλ‹¨ λ©”λª¨"
+            value={store.settings.message}
+            onChange={(e) =>
+              setStore((s) => ({
+                ...s,
+                settings: { ...s.settings, message: e.target.value },
+              }))
+            }
+            placeholder="κΈ°μ–µν•  λ¬Έμ¥μ„ μ μ–΄λ‘μ„Έμ”."
+          />
+        </div>
+      </section>
+      <section className="canvas-wrap">
+        <div className="canvas-label">
+          <div className="workspace-tabs">
+            <button
+              className={settingsOpen ? "active settings-tab" : "settings-tab"}
+              aria-label="μ„¤μ •"
+              onClick={() => {
+                setSettingsOpen(true);
+                setSelected([]);
+              }}
+            >
+              β™
+            </button>
+            {store.workspaces.map((ws) => (
+              <button
+                key={ws.id}
+                className={
+                  !settingsOpen && ws.id === store.activeWorkspaceId
+                    ? "active"
+                    : ""
+                }
+                onClick={() => {
+                  setSettingsOpen(false);
+                  setSelected([]);
+                  setStore((s) => ({ ...s, activeWorkspaceId: ws.id }));
+                }}
+              >
+                {ws.name}
+              </button>
+            ))}
+          </div>
+        </div>
+        {settingsOpen ? (
+          <div className="settings-space">
+            <aside>
+              <div className="settings-title">PREFERENCES</div>
+              <button
+                className={settingsSection === "workspaces" ? "active" : ""}
+                onClick={() => setSettingsSection("workspaces")}
+              >
+                μ›ν¬μ¤νμ΄μ¤
+              </button>
+              <button
+                className={settingsSection === "widgets" ? "active" : ""}
+                onClick={() => setSettingsSection("widgets")}
+              >
+                μ„μ ― μ¤νƒ€μΌ
+              </button>
+              <button
+                className={settingsSection === "sizes" ? "active" : ""}
+                onClick={() => setSettingsSection("sizes")}
+              >
+                μ„μ ― ν¬κΈ°
+              </button>
+              <button
+                className={settingsSection === "theme" ? "active" : ""}
+                onClick={() => setSettingsSection("theme")}
+              >
+                νμ΄μ§€ ν…λ§
+              </button>
+              <button
+                className={settingsSection === "data" ? "active" : ""}
+                onClick={() => setSettingsSection("data")}
+              >
+                λ°μ΄ν„° κ΄€λ¦¬
+              </button>
+            </aside>
+            <section>
+              {settingsSection === "workspaces" ? (
+                <>
+                  <div className="settings-heading">
+                    <div>
+                      <small>SETTINGS</small>
+                      <h2>μ›ν¬μ¤νμ΄μ¤ κ΄€λ¦¬</h2>
+                      <p>
+                        μ›ν¬μ¤νμ΄μ¤λ¥Ό μ¶”κ°€ν•κ±°λ‚ μ΄λ¦„μ„ λ°”κΎΈκ³  μ‚­μ ν•  μ
+                        μμµλ‹λ‹¤.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const name = prompt(
+                          "μƒ μ›ν¬μ¤νμ΄μ¤ μ΄λ¦„",
+                          `SPACE ${store.workspaces.length + 1}`,
+                        );
+                        if (!name) return;
+                        const id = crypto.randomUUID();
+                        setStore((s) => ({
+                          ...s,
+                          workspaces: [...s.workspaces, { id, name }],
+                          activeWorkspaceId: id,
+                        }));
+                      }}
+                    >
+                      οΌ‹ μƒ μ›ν¬μ¤νμ΄μ¤
+                    </button>
+                  </div>
+                  <div className="workspace-manager">
+                    {store.workspaces.map((ws) => (
+                      <div className="workspace-row" key={ws.id}>
+                        <div>
+                          <span>{ws.name.slice(0, 1).toUpperCase()}</span>
+                          <strong>{ws.name}</strong>
+                          <small>
+                            {
+                              store.widgets.filter(
+                                (w) => w.workspaceId === ws.id,
+                              ).length
+                            }{" "}
+                            widgets
+                          </small>
+                        </div>
+                        <div>
+                          <button
+                            onClick={() => {
+                              const name = prompt(
+                                "μ›ν¬μ¤νμ΄μ¤ μ΄λ¦„ λ³€κ²½",
+                                ws.name,
+                              );
+                              if (!name) return;
+                              setStore((s) => ({
+                                ...s,
+                                workspaces: s.workspaces.map((w) =>
+                                  w.id === ws.id ? { ...w, name } : w,
+                                ),
+                              }));
+                            }}
+                          >
+                            μ΄λ¦„ λ³€κ²½
+                          </button>
+                          <button
+                            className="danger"
+                            disabled={store.workspaces.length === 1}
+                            onClick={() => {
+                              if (
+                                !confirm(
+                                  `'${ws.name}' μ›ν¬μ¤νμ΄μ¤μ™€ ν¬ν•¨λ μ„μ ―μ„ μ‚­μ ν• κΉμ”?`,
+                                )
+                              )
+                                return;
+                              setStore((s) => {
+                                const remaining = s.workspaces.filter(
+                                  (w) => w.id !== ws.id,
+                                );
+                                return {
+                                  ...s,
+                                  workspaces: remaining,
+                                  activeWorkspaceId:
+                                    s.activeWorkspaceId === ws.id
+                                      ? remaining[0].id
+                                      : s.activeWorkspaceId,
+                                  widgets: s.widgets.filter(
+                                    (w) => w.workspaceId !== ws.id,
+                                  ),
+                                };
+                              });
+                            }}
+                          >
+                            μ‚­μ 
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : settingsSection === "widgets" ? (
+                <>
+                  <div className="settings-heading">
+                    <div>
+                      <small>APPEARANCE</small>
+                      <h2>μ„μ ― ν…λ‘λ¦¬</h2>
+                      <p>
+                        μƒ μ„μ ―μ— μ μ©ν•  νƒ€μ…λ³„ κΈ°λ³Έ ν…λ‘λ¦¬ μƒ‰μƒμ„ μ„¤μ •ν•©λ‹λ‹¤.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="widget-color-settings">
+                    {(
+                      [
+                        "bookmark",
+                        "note",
+                        "todo",
+                        "weather",
+                        "calendar",
+                      ] as Kind[]
+                    ).map((type) => (
+                      <label key={type}>
+                        <span className={`kind kind-${type}`}>
+                          {type === "bookmark"
+                            ? "β†—"
+                            : type === "note"
+                              ? "β‰΅"
+                              : type === "todo"
+                                ? "β“"
+                                : type === "weather"
+                                  ? "β"
+                                  : "β–΅"}
+                        </span>
+                        <strong>{type.toUpperCase()}</strong>
+                        <input
+                          type="color"
+                          value={store.settings.widgetColors[type]}
+                          onChange={(e) =>
+                            setStore((s) => ({
+                              ...s,
+                              settings: {
+                                ...s.settings,
+                                widgetColors: {
+                                  ...s.settings.widgetColors,
+                                  [type]: e.target.value,
+                                },
+                              },
+                            }))
+                          }
+                        />
+                        <code>{store.settings.widgetColors[type]}</code>
+                        <button
+                          onClick={() =>
+                            setStore((s) => ({
+                              ...s,
+                              widgets: s.widgets.map((w) =>
+                                w.type === type
+                                  ? {
+                                      ...w,
+                                      style: {
+                                        borderColor:
+                                          s.settings.widgetColors[type],
+                                      },
+                                    }
+                                  : w,
+                              ),
+                            }))
+                          }
+                        >
+                          κΈ°μ΅΄ μ„μ ―μ—λ„ μ μ©
+                        </button>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              ) : settingsSection === "sizes" ? (
+                <>
+                  <div className="settings-heading">
+                    <div>
+                      <small>LAYOUT</small>
+                      <h2>μ„μ ― ν¬κΈ° ν”„λ¦¬μ…‹</h2>
+                      <p>μ„μ ― μƒμ„±κ³Ό μμ • μ‹ μ„ νƒν•  ν¬κΈ°λ¥Ό κ΄€λ¦¬ν•©λ‹λ‹¤.</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const name = prompt("ν”„λ¦¬μ…‹ μ΄λ¦„", "μƒ ν¬κΈ°");
+                        if (!name) return;
+                        const width = Number(prompt("λ„λΉ„(px)", "300"));
+                        const height = Number(prompt("λ†’μ΄(px)", "200"));
+                        if (
+                          !Number.isFinite(width) ||
+                          !Number.isFinite(height) ||
+                          width < 240 ||
+                          height < 150
+                        )
+                          return setToast("μµμ† ν¬κΈ°λ” 240Γ—150μ…λ‹λ‹¤.");
+                        setStore((s) => ({
+                          ...s,
+                          settings: {
+                            ...s.settings,
+                            sizePresets: [
+                              ...s.settings.sizePresets,
+                              { id: crypto.randomUUID(), name, width, height },
+                            ],
+                          },
+                        }));
+                      }}
+                    >
+                      οΌ‹ ν”„λ¦¬μ…‹ μ¶”κ°€
+                    </button>
+                  </div>
+                  <div className="size-preset-list">
+                    {store.settings.sizePresets.map((preset) => (
+                      <div key={preset.id}>
+                        <span
+                          className="size-preview"
+                          style={{
+                            aspectRatio: `${preset.width}/${preset.height}`,
+                          }}
+                        />
+                        <strong>{preset.name}</strong>
+                        <code>
+                          {preset.width} Γ— {preset.height}
+                        </code>
+                        <button
+                          onClick={() => {
+                            const name = prompt("ν”„λ¦¬μ…‹ μ΄λ¦„", preset.name);
+                            if (!name) return;
+                            const width = Number(
+                              prompt("λ„λΉ„(px)", String(preset.width)),
+                            );
+                            const height = Number(
+                              prompt("λ†’μ΄(px)", String(preset.height)),
+                            );
+                            if (
+                              !Number.isFinite(width) ||
+                              !Number.isFinite(height) ||
+                              width < 240 ||
+                              height < 150
+                            )
+                              return setToast("μµμ† ν¬κΈ°λ” 240Γ—150μ…λ‹λ‹¤.");
+                            setStore((s) => ({
+                              ...s,
+                              settings: {
+                                ...s.settings,
+                                sizePresets: s.settings.sizePresets.map((p) =>
+                                  p.id === preset.id
+                                    ? { ...p, name, width, height }
+                                    : p,
+                                ),
+                              },
+                            }));
+                          }}
+                        >
+                          μμ •
+                        </button>
+                        <button
+                          className="danger"
+                          disabled={store.settings.sizePresets.length === 1}
+                          onClick={() =>
+                            setStore((s) => ({
+                              ...s,
+                              settings: {
+                                ...s.settings,
+                                sizePresets: s.settings.sizePresets.filter(
+                                  (p) => p.id !== preset.id,
+                                ),
+                              },
+                            }))
+                          }
+                        >
+                          μ‚­μ 
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : settingsSection === "theme" ? (
+                <>
+                  <div className="settings-heading">
+                    <div>
+                      <small>APPEARANCE</small>
+                      <h2>νμ΄μ§€ ν…λ§</h2>
+                      <p>λ€μ‹λ³΄λ“ μ „μ²΄μ μƒ‰μƒ ν…λ§λ¥Ό μ„ νƒν•©λ‹λ‹¤.</p>
+                    </div>
+                  </div>
+                  <div className="theme-options">
+                    {(["dark", "light", "blue"] as Theme[]).map((theme) => (
+                      <button
+                        key={theme}
+                        className={
+                          store.settings.theme === theme ? "active" : ""
+                        }
+                        onClick={() =>
+                          setStore((s) => ({
+                            ...s,
+                            settings: { ...s.settings, theme },
+                          }))
+                        }
+                      >
+                        <span className={`theme-swatch ${theme}`}>
+                          <i />
+                          <i />
+                          <i />
+                        </span>
+                        <strong>
+                          {theme === "dark"
+                            ? "λ‹¤ν¬"
+                            : theme === "light"
+                              ? "ν™”μ΄νΈ"
+                              : "νμ¤ν…” λΈ”λ£¨"}
+                        </strong>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="settings-heading">
+                    <div>
+                      <small>BACKUP</small>
+                      <h2>λ°μ΄ν„° κ΄€λ¦¬</h2>
+                      <p>
+                        λ€μ‹λ³΄λ“ μ „μ²΄ λ°μ΄ν„°λ¥Ό νμΌλ΅ λ‚΄λ³΄λ‚΄κ±°λ‚ μ΄μ „ λ°±μ—…μ„
+                        κ°€μ Έμµλ‹λ‹¤.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="data-actions">
+                    <article>
+                      <strong>λ°μ΄ν„° λ‚΄λ³΄λ‚΄κΈ°</strong>
+                      <p>μ›ν¬μ¤νμ΄μ¤, μ„μ ―, μ„¤μ •μ„ JSON νμΌλ΅ μ €μ¥ν•©λ‹λ‹¤.</p>
+                      <button onClick={exportJson}>β†“ EXPORT</button>
+                    </article>
+                    <article>
+                      <strong>λ°μ΄ν„° κ°€μ Έμ¤κΈ°</strong>
+                      <p>μ €μ¥ν•΄ λ‘” JSON νμΌλ΅ ν„μ¬ λ€μ‹λ³΄λ“λ¥Ό λ³µμ›ν•©λ‹λ‹¤.</p>
+                      <button onClick={() => fileRef.current?.click()}>
+                        β†‘ IMPORT
+                      </button>
+                      <input
+                        ref={fileRef}
+                        hidden
+                        type="file"
+                        accept="application/json"
+                        onChange={(e) => importJson(e.target.files?.[0])}
+                      />
+                    </article>
+                  </div>
+                </>
+              )}
+            </section>
+          </div>
+        ) : (
+          <div
+            className="canvas"
+            ref={canvasRef}
+            onPointerDown={beginSelection}
+            style={{
+              height: Math.max(
+                650,
+                ...visibleWidgets.map((w) => w.layout.y + w.layout.height + 80),
+              ),
+            }}
+          >
+            {selectionBox && (
+              <span
+                className="selection-box"
+                style={{
+                  left: selectionBox.x,
+                  top: selectionBox.y,
+                  width: selectionBox.width,
+                  height: selectionBox.height,
+                }}
+              />
+            )}
+            {visibleWidgets.map((w) => (
+              <article
+                key={w.id}
+                data-id={w.id}
+                data-x={w.layout.x}
+                data-y={w.layout.y}
+                data-width={w.layout.width}
+                data-height={w.layout.height}
+                data-z={w.layout.zIndex}
+                className={`widget ${selected.includes(w.id) ? "selected" : ""}`}
+                style={{
+                  transform: `translate(${w.layout.x}px, ${w.layout.y}px)`,
+                  width: w.layout.width,
+                  height: w.layout.height,
+                  zIndex: w.layout.zIndex,
+                  borderColor: w.style.borderColor,
+                }}
+                onPointerDownCapture={(e) => {
+                  if (e.button !== 0) return;
+                  const nextZ =
+                    Math.max(
+                      0,
+                      ...store.widgets.map((item) => item.layout.zIndex),
+                    ) + 1;
+                  e.currentTarget.style.zIndex = String(nextZ);
+                  e.currentTarget.dataset.z = String(nextZ);
+                }}
+                onPointerUp={(e) => {
+                  const nextZ = Number(e.currentTarget.dataset.z || 1);
+                  const widgetId = w.id;
+                  window.setTimeout(() => {
+                    setStore((s) => ({
+                      ...s,
+                      widgets: s.widgets.map((item) =>
+                        item.id === widgetId
+                          ? {
+                              ...item,
+                              layout: { ...item.layout, zIndex: nextZ },
+                              updatedAt: now(),
+                            }
+                          : item,
+                      ),
+                    }));
+                  }, 0);
+                }}
+                onClick={(e) => {
+                  if (
+                    (e.target as HTMLElement).closest("button,a,input,textarea")
+                  )
+                    return;
+                  if (e.ctrlKey)
+                    setSelected((s) =>
+                      s.includes(w.id)
+                        ? s.filter((id) => id !== w.id)
+                        : [...s, w.id],
+                    );
+                  else if (!selected.includes(w.id)) setSelected([w.id]);
+                }}
+              >
+                <div className="widget-top drag-handle">
+                  <Icon type={w.type} />
+                  <span>{w.type.toUpperCase()}</span>
+                  <div className="widget-tools">
+                    <button
+                      aria-label="μμ •"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={() => setModal({ type: w.type, widgetId: w.id })}
+                    >
+                      β
+                    </button>
+                    <button
+                      aria-label="λ³µμ "
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={() =>
+                        setStore((s) => ({
+                          ...s,
+                          widgets: [
+                            ...s.widgets,
+                            {
+                              ...w,
+                              id: crypto.randomUUID(),
+                              layout: {
+                                ...w.layout,
+                                x: w.layout.x + 20,
+                                y: w.layout.y + 20,
+                              },
+                            },
+                          ],
+                        }))
+                      }
+                    >
+                      β§‰
+                    </button>
+                    <button
+                      aria-label="μ‚­μ "
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={() => remove(w.id)}
+                    >
+                      Γ—
+                    </button>
+                  </div>
+                </div>
+                <div className="widget-body">
+                  {w.type === "bookmark" ? (
+                    <a
+                      className="bookmark-content"
+                      href={w.data.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <h2>{w.title}</h2>
+                      <p className="url">{w.data.url}</p>
+                      <span className="bookmark-open">OPEN RESOURCE β†—</span>
+                    </a>
+                  ) : (
+                    <>
+                      {w.type !== "calendar" && <h2>{w.title}</h2>}
+                      {w.type === "note" && (
+                        <textarea
+                          aria-label={`${w.title} λ‚΄μ©`}
+                          value={w.data.body || ""}
+                          readOnly
+                        />
+                      )}
+                      {w.type === "todo" && (
+                        <div className="todo-footer">
+                          <label className="todo">
+                            <input
+                              type="checkbox"
+                              checked={!!w.data.done}
+                              onChange={(e) =>
+                                update(w.id, {
+                                  data: { ...w.data, done: e.target.checked },
+                                })
+                              }
+                            />
+                            <span className={w.data.done ? "done" : ""}>
+                              {w.data.done ? "COMPLETED" : "IN PROGRESS"}
+                            </span>
+                          </label>
+                          <span className="todo-due">
+                            {w.data.due || "NO DEADLINE"}
+                          </span>
+                          <span
+                            className={`priority ${w.data.priority?.toLowerCase()}`}
+                          >
+                            {w.data.priority}
+                          </span>
+                        </div>
+                      )}
+                      {w.type === "weather" && <WeatherWidget widget={w} />}
+                      {w.type === "calendar" && <CalendarWidget />}
+                    </>
+                  )}
+                </div>
+                <span className="resize-corner" />
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+      <footer>
+        <span>
+          LOCAL STORAGE <b>ACTIVE</b>
+        </span>
+        <span>DATA STAYS ON THIS DEVICE</span>
+        <span>SSAFY DASHBOARD Β· V1.0.1</span>
+      </footer>
+      {modal && (
+        <div
+          className="modal-backdrop"
+          onMouseDown={(e) => e.target === e.currentTarget && setModal(null)}
+        >
+          <form className="modal" onSubmit={addWidget}>
+            <div>
+              <span>
+                {modalWidget ? "EDIT" : "NEW"} / {modal.type.toUpperCase()}
+              </span>
+              <button type="button" onClick={() => setModal(null)}>
+                Γ—
+              </button>
+            </div>
+            <h2>
+              {modalWidget
+                ? "μ„μ ― μμ •"
+                : `μƒ ${modal.type === "bookmark" ? "λ¶λ§ν¬" : modal.type === "note" ? "λ©”λª¨" : modal.type === "todo" ? "ν•  μΌ" : modal.type === "weather" ? "λ‚ μ”¨" : "λ‹¬λ ¥"}`}
+            </h2>
+            {modal.type !== "calendar" && (
+              <label>
+                μ λª©
+                <input
+                  name="title"
+                  required
+                  autoFocus
+                  defaultValue={modalWidget?.title}
+                  placeholder="μ λª©μ„ μ…λ ¥ν•μ„Έμ”"
+                />
+              </label>
+            )}
+            <label>
+              μ„μ ― ν¬κΈ°
+              <select
+                name="sizePreset"
+                defaultValue={
+                  modalWidget ? "" : store.settings.sizePresets[0].id
+                }
+              >
+                {modalWidget && <option value="">λ³€κ²½ μ• ν•¨</option>}
+                {store.settings.sizePresets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.name} Β· {preset.width}Γ—{preset.height}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {modalWidget && (
+              <label>
+                μ›ν¬μ¤νμ΄μ¤
+                <select
+                  name="workspaceId"
+                  defaultValue={modalWidget.workspaceId}
+                >
+                  {store.workspaces.map((workspace) => (
+                    <option key={workspace.id} value={workspace.id}>
+                      {workspace.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label>
+              ν…λ‘λ¦¬ μƒ‰μƒ
+              <input
+                className="color-input"
+                name="borderColor"
+                type="color"
+                defaultValue={
+                  modalWidget?.style.borderColor ||
+                  store.settings.widgetColors[modal.type]
+                }
+              />
+            </label>
+            {(modal.type === "bookmark" || modal.type === "note") && (
+              <label>
+                {modal.type === "bookmark" ? "URL" : "λ‚΄μ©"}
+                {modal.type === "note" ? (
+                  <textarea
+                    name="content"
+                    rows={5}
+                    defaultValue={modalWidget?.data.body}
+                    placeholder="λ©”λª¨λ¥Ό μ…λ ¥ν•μ„Έμ”"
+                  />
+                ) : (
+                  <input
+                    name="content"
+                    type="url"
+                    defaultValue={modalWidget?.data.url || "https://"}
+                    required
+                  />
+                )}
+              </label>
+            )}
+            {modal.type === "weather" && (
+              <LocationPicker widget={modalWidget} />
+            )}
+            {modal.type === "todo" && (
+              <>
+                <label>
+                  λ§κ°μΌ
+                  <input
+                    name="due"
+                    type="date"
+                    defaultValue={
+                      modalWidget?.data.due ||
+                      new Date().toISOString().slice(0, 10)
+                    }
+                    onClick={(e) => e.currentTarget.showPicker?.()}
+                  />
+                </label>
+                <label>
+                  μ°μ„ μμ„
+                  <select
+                    name="priority"
+                    defaultValue={modalWidget?.data.priority || "MEDIUM"}
+                  >
+                    <option>HIGH</option>
+                    <option>MEDIUM</option>
+                    <option>LOW</option>
+                  </select>
+                </label>
+              </>
+            )}
+            <div className="modal-actions">
+              <button type="button" onClick={() => setModal(null)}>
+                CANCEL
+              </button>
+              <button type="submit">
+                {modalWidget ? "SAVE CHANGES" : "CREATE WIDGET"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      )}
+    </main>
+  );
+}

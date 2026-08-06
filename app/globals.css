@@ -907,6 +907,9 @@ button {
   width: 28px;
   height: 26px;
 }
+.calendar-nav strong {
+  font-size: 14px;
+}
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -916,13 +919,13 @@ button {
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 23px;
+  min-height: 28px;
   color: var(--text);
-  font-size: 10px;
+  font-size: 13px;
 }
 .calendar-weekdays span {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
 }
 .calendar-grid span:nth-child(7n + 1),
 .calendar-grid span.holiday {
@@ -936,17 +939,44 @@ button {
   border-radius: 50%;
   background: #ef6b6b;
 }
-.holiday-list {
-  display: flex;
+.location-picker {
+  display: grid;
+  gap: 8px;
+}
+.location-search {
+  display: grid;
+  grid-template-columns: 1fr auto;
   gap: 7px;
-  overflow-x: auto;
+}
+.location-search button,
+.location-results button {
+  border: 1px solid var(--line);
+  background: var(--control-bg);
+  color: var(--text);
+}
+.location-search button {
+  padding: 0 14px;
+}
+.location-results {
+  display: grid;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+}
+.location-results button {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  border-width: 0 0 1px;
+  text-align: left;
+}
+.location-results button:last-child {
+  border-bottom: 0;
+}
+.location-results small,
+.selected-location {
   color: var(--muted);
-}
-.holiday-list small {
-  white-space: nowrap;
-}
-.holiday-list b {
-  color: #ef6b6b;
 }
 .widget-top small {
   border-left: 1px solid var(--line);
