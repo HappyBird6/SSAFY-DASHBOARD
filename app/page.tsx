@@ -779,6 +779,14 @@ function BookmarkLinksEditor({ widget }: { widget?: Widget }) {
       ? [{ id: crypto.randomUUID(), label: widget.title || "LINK", url: widget.data.url }]
       : [{ id: crypto.randomUUID(), label: "새 링크", url: "https://" }];
   const [links, setLinks] = useState(existing);
+  const moveLink = (index: number, offset: number) =>
+    setLinks((items) => {
+      const target = index + offset;
+      if (target < 0 || target >= items.length) return items;
+      const next = [...items];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
   return (
     <fieldset className="bookmark-links-editor">
       <legend>링크 목록</legend>
@@ -799,6 +807,24 @@ function BookmarkLinksEditor({ widget }: { widget?: Widget }) {
             placeholder="https://"
             required
           />
+          <button
+            className="bookmark-order"
+            type="button"
+            aria-label={`${index + 1}번 링크 위로 이동`}
+            disabled={index === 0}
+            onClick={() => moveLink(index, -1)}
+          >
+            ↑
+          </button>
+          <button
+            className="bookmark-order"
+            type="button"
+            aria-label={`${index + 1}번 링크 아래로 이동`}
+            disabled={index === links.length - 1}
+            onClick={() => moveLink(index, 1)}
+          >
+            ↓
+          </button>
           <button
             type="button"
             aria-label={`${index + 1}번 링크 삭제`}
@@ -874,6 +900,16 @@ export default function Home() {
   useEffect(() => {
     selectedRef.current = selected;
   }, [selected]);
+  useEffect(() => {
+    if (!modal) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setModal(null);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [modal]);
 
   const update = (id: string, patch: Partial<Widget>) =>
     setStore((s) => ({
@@ -966,8 +1002,15 @@ export default function Home() {
           move(e) {
             const target = e.target as HTMLElement;
             const isBookmark = target.dataset.type === "bookmark";
-            const width = Math.max(isBookmark ? 210 : 240, e.rect.width);
-            const height = Math.max(isBookmark ? 86 : 150, e.rect.height);
+            const bookmarkHeight =
+              68 +
+              (target.dataset.hasTitle === "true" ? 38 : 0) +
+              Number(target.dataset.linkCount || 1) * 44;
+            const width = Math.max(isBookmark ? 250 : 240, e.rect.width);
+            const height = Math.max(
+              isBookmark ? bookmarkHeight : 150,
+              e.rect.height,
+            );
             const x = Number(target.dataset.x || 0) + e.deltaRect.left;
             const y = Math.max(
               0,
@@ -1112,7 +1155,6 @@ export default function Home() {
           ),
         };
       });
-      setToast("위젯을 수정했습니다.");
     } else {
       setStore((s) => {
         const preset =
@@ -1164,7 +1206,6 @@ export default function Home() {
           ],
         };
       });
-      setToast("위젯을 추가했습니다.");
     }
     setModal(null);
   };
@@ -1745,6 +1786,8 @@ export default function Home() {
                 key={w.id}
                 data-id={w.id}
                 data-type={w.type}
+                data-link-count={w.data.links?.length || (w.data.url ? 1 : 0)}
+                data-has-title={Boolean(w.title)}
                 data-x={w.layout.x}
                 data-y={w.layout.y}
                 data-width={w.layout.width}
@@ -1956,7 +1999,10 @@ export default function Home() {
           className="modal-backdrop"
           onMouseDown={(e) => e.target === e.currentTarget && setModal(null)}
         >
-          <form className="modal" onSubmit={addWidget}>
+          <form
+            className={`modal ${modal.type === "countdown" ? "modal-countdown" : ""}`}
+            onSubmit={addWidget}
+          >
             <div>
               <span>
                 {modalWidget ? "EDIT" : "NEW"} / {modal.type.toUpperCase()}
