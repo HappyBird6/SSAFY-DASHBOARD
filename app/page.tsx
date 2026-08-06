@@ -11,7 +11,8 @@ type Kind =
   | "weather"
   | "calendar"
   | "timer"
-  | "countdown";
+  | "countdown"
+  | "launcher";
 type Layout = {
   x: number;
   y: number;
@@ -44,6 +45,8 @@ type Widget = {
     timerEndsAt?: string;
     countdownDate?: string;
     countdownFontSize?: number;
+    launcherLabel?: string;
+    launcherUrl?: string;
   };
   createdAt: string;
   updatedAt: string;
@@ -81,6 +84,7 @@ const backupSchema = z.object({
         calendar: z.string().optional(),
         timer: z.string().optional(),
         countdown: z.string().optional(),
+        launcher: z.string().optional(),
       })
       .optional(),
     sizePresets: z
@@ -120,6 +124,8 @@ const backupSchema = z.object({
         "calendar",
         "timer",
         "countdown",
+        "launcher",
+        "launcher",
       ]),
       title: z.string(),
       layout: z.object({
@@ -149,6 +155,8 @@ const backupSchema = z.object({
         timerEndsAt: z.string().optional(),
         countdownDate: z.string().optional(),
         countdownFontSize: z.number().optional(),
+        launcherLabel: z.string().optional(),
+        launcherUrl: z.string().optional(),
       }),
       createdAt: z.string(),
       updatedAt: z.string(),
@@ -166,6 +174,7 @@ const DEFAULT_WIDGET_COLORS: Record<Kind, string> = {
   calendar: "#f59e0b",
   timer: "#22c55e",
   countdown: "#f97316",
+  launcher: "#60a5fa",
 };
 const DEFAULT_SIZE_PRESETS: SizePreset[] = [
   { id: "size-default", name: "기본", width: 300, height: 200 },
@@ -279,7 +288,9 @@ function Icon({ type }: { type: Kind }) {
                 ? "□"
                 : type === "timer"
                   ? "◷"
-                  : "D"}
+                  : type === "countdown"
+                    ? "D"
+                    : "⚡"}
     </span>
   );
 }
@@ -948,34 +959,41 @@ export default function Home() {
     const presetId = String(form.get("sizePreset") || "");
     const workspaceId = String(form.get("workspaceId") || "");
     const data =
-      type === "timer"
+      type === "launcher"
         ? {
-            timerMinutes: Number(form.get("timerMinutes") || 25),
-            timerRemaining: Number(form.get("timerMinutes") || 25) * 60,
-            timerRunning: false,
+            launcherLabel: String(form.get("launcherLabel") || "WEBEX"),
+            launcherUrl: String(
+              form.get("launcherUrl") || "https://www.webex.com/",
+            ),
           }
-        : type === "countdown"
+        : type === "timer"
           ? {
-              countdownDate: String(form.get("countdownDate") || ""),
-              countdownFontSize: modalWidget?.data.countdownFontSize || 56,
+              timerMinutes: Number(form.get("timerMinutes") || 25),
+              timerRemaining: Number(form.get("timerMinutes") || 25) * 60,
+              timerRunning: false,
             }
-          : type === "weather"
+          : type === "countdown"
             ? {
-                locationName: String(form.get("locationName") || "서울"),
-                latitude: Number(form.get("latitude") || 37.5665),
-                longitude: Number(form.get("longitude") || 126.978),
+                countdownDate: String(form.get("countdownDate") || ""),
+                countdownFontSize: modalWidget?.data.countdownFontSize || 56,
               }
-            : type === "calendar"
-              ? {}
-              : type === "bookmark"
-                ? { url: String(form.get("content") || "https://") }
-                : type === "note"
-                  ? { body: String(form.get("content") || "") }
-                  : {
-                      done: modalWidget?.data.done || false,
-                      due: String(form.get("due") || ""),
-                      priority: String(form.get("priority") || "MEDIUM"),
-                    };
+            : type === "weather"
+              ? {
+                  locationName: String(form.get("locationName") || "서울"),
+                  latitude: Number(form.get("latitude") || 37.5665),
+                  longitude: Number(form.get("longitude") || 126.978),
+                }
+              : type === "calendar"
+                ? {}
+                : type === "bookmark"
+                  ? { url: String(form.get("content") || "https://") }
+                  : type === "note"
+                    ? { body: String(form.get("content") || "") }
+                    : {
+                        done: modalWidget?.data.done || false,
+                        due: String(form.get("due") || ""),
+                        priority: String(form.get("priority") || "MEDIUM"),
+                      };
     if (modal?.widgetId) {
       setStore((s) => {
         const preset = s.settings.sizePresets.find((p) => p.id === presetId);
@@ -1145,7 +1163,7 @@ export default function Home() {
                 style={{ color: store.settings.widgetColors[type] }}
                 onClick={() => setModal({ type })}
               >
-                {type.toUpperCase()}
+                {type === "launcher" ? "QUICK LAUNCH" : type.toUpperCase()}
               </button>
             ))}
           </div>
@@ -1385,6 +1403,7 @@ export default function Home() {
                         "calendar",
                         "timer",
                         "countdown",
+                        "launcher",
                       ] as Kind[]
                     ).map((type) => (
                       <label key={type}>
@@ -1401,7 +1420,9 @@ export default function Home() {
                                     ? "□"
                                     : type === "timer"
                                       ? "◷"
-                                      : "D"}
+                                      : type === "countdown"
+                                        ? "D"
+                                        : "⚡"}
                         </span>
                         <strong>{type.toUpperCase()}</strong>
                         <input
@@ -1816,6 +1837,20 @@ export default function Home() {
                           onData={(data) => update(w.id, { data })}
                         />
                       )}
+                      {w.type === "launcher" && (
+                        <div className="quick-launch-grid">
+                          <a
+                            href={
+                              w.data.launcherUrl || "https://www.webex.com/"
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <span>W</span>
+                            <strong>{w.data.launcherLabel || "WEBEX"}</strong>
+                          </a>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -1849,7 +1884,7 @@ export default function Home() {
             <h2>
               {modalWidget
                 ? "위젯 수정"
-                : `새 ${modal.type === "bookmark" ? "북마크" : modal.type === "note" ? "메모" : modal.type === "todo" ? "할 일" : modal.type === "weather" ? "날씨" : modal.type === "calendar" ? "달력" : modal.type === "timer" ? "학습 타이머" : "카운트다운"}`}
+                : `새 ${modal.type === "bookmark" ? "북마크" : modal.type === "note" ? "메모" : modal.type === "todo" ? "할 일" : modal.type === "weather" ? "날씨" : modal.type === "calendar" ? "달력" : modal.type === "timer" ? "학습 타이머" : modal.type === "countdown" ? "카운트다운" : "빠른 실행"}`}
             </h2>
             {modal.type !== "calendar" && (
               <label>
@@ -1960,6 +1995,29 @@ export default function Home() {
                   required
                 />
               </label>
+            )}
+            {modal.type === "launcher" && (
+              <>
+                <label>
+                  버튼 이름
+                  <input
+                    name="launcherLabel"
+                    defaultValue={modalWidget?.data.launcherLabel || "WEBEX"}
+                    required
+                  />
+                </label>
+                <label>
+                  실행 URL
+                  <input
+                    name="launcherUrl"
+                    type="url"
+                    defaultValue={
+                      modalWidget?.data.launcherUrl || "https://www.webex.com/"
+                    }
+                    required
+                  />
+                </label>
+              </>
             )}
             {modal.type === "todo" && (
               <>
