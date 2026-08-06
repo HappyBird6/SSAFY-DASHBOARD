@@ -964,11 +964,11 @@ function DashboardCat({
         x: Math.max(
           8,
           Math.min(
-            main.width - 112,
+            main.width - 92,
             rect.left - main.left + (home ? rect.width + 18 : rect.width * 0.45),
           ),
         ),
-        y: Math.max(78, rect.top - main.top - 78),
+        y: Math.max(62, rect.top - main.top - 62),
       };
     };
     const home = () => {

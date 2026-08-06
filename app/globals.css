@@ -478,7 +478,7 @@ main[data-theme="blue"] .todo-footer {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  margin-left: 18px;
+  margin-left: 112px;
   color: var(--muted);
   font-size: 9px;
   letter-spacing: 0.12em;
@@ -1235,8 +1235,8 @@ button {
   position: absolute;
   left: 0;
   top: 0;
-  width: 104px;
-  height: 78px;
+  width: 83.2px;
+  height: 62.4px;
   z-index: 2147481500;
   pointer-events: none;
   transform-origin: 50% 100%;
@@ -1245,10 +1245,10 @@ button {
 }
 .dashboard-cat > span {
   display: block;
-  width: 104px;
-  height: 78px;
+  width: 83.2px;
+  height: 62.4px;
   background-repeat: no-repeat;
-  background-size: 832px 474px;
+  background-size: 665.6px 249.6px;
   transform-origin: center bottom;
 }
 .dashboard-cat.facing-left > span {
@@ -1264,7 +1264,7 @@ button {
 }
 .cat-jump > span {
   background-position-y: 66.666%;
-  animation: cat-frames 0.85s steps(7) infinite;
+  animation: cat-jump-frames 0.85s steps(6) infinite;
 }
 .cat-groom > span {
   background-position-y: 100%;
@@ -1280,6 +1280,14 @@ button {
   }
   to {
     background-position-x: 100%;
+  }
+}
+@keyframes cat-jump-frames {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: 85.714%;
   }
 }
 @keyframes cat-breathe {
