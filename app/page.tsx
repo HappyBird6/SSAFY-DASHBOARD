@@ -69,6 +69,7 @@ type Store = {
     widgetColors: Record<Kind, string>;
     sizePresets: SizePreset[];
     theme: Theme;
+    catEnabled: boolean;
   };
   workspaces: Workspace[];
   activeWorkspaceId: string;
@@ -106,6 +107,7 @@ const backupSchema = z.object({
       )
       .optional(),
     theme: z.enum(["dark", "light", "blue"]).optional(),
+    catEnabled: z.boolean().optional(),
   }),
   workspaces: z
     .array(z.object({ id: z.string(), name: z.string() }))
@@ -232,6 +234,7 @@ const initial: Store = {
     widgetColors: DEFAULT_WIDGET_COLORS,
     sizePresets: DEFAULT_SIZE_PRESETS,
     theme: "dark",
+    catEnabled: true,
   },
   workspaces: [{ id: MAIN_WORKSPACE, name: "MAIN" }],
   activeWorkspaceId: MAIN_WORKSPACE,
@@ -277,10 +280,13 @@ const normalizeStore = (value: unknown): Store => {
       widgetColors,
       sizePresets,
       theme: parsed.settings.theme || "dark",
+      catEnabled: parsed.settings.catEnabled ?? true,
     },
     workspaces,
     activeWorkspaceId,
-    widgets: parsed.widgets.filter((w) => w.type !== "launcher").map((w) => {
+    widgets: parsed.widgets
+      .filter((w) => w.type !== "launcher" && w.type !== "fish")
+      .map((w) => {
       const links =
         w.type === "bookmark" && !w.data.links?.length && w.data.url
           ? [{ id: crypto.randomUUID(), label: w.title || "LINK", url: w.data.url }]
@@ -295,7 +301,7 @@ const normalizeStore = (value: unknown): Store => {
             ? { borderColor: widgetColors[w.type] }
             : w.style,
       };
-    }),
+      }),
   };
 };
 
@@ -931,6 +937,145 @@ function BookmarkLinksEditor({ widget }: { widget?: Widget }) {
   );
 }
 
+type CatPose = "idle" | "walk" | "jump" | "groom" | "sleep";
+
+function DashboardCat({
+  enabled,
+  resting,
+}: {
+  enabled: boolean;
+  resting: boolean;
+}) {
+  const catRef = useRef<HTMLDivElement>(null);
+  const positionRef = useRef({ x: 230, y: 105 });
+  const [position, setPosition] = useState(positionRef.current);
+  const [pose, setPose] = useState<CatPose>("idle");
+  const [facingLeft, setFacingLeft] = useState(false);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let timer = 0;
+    let cancelled = false;
+    const locate = (element: Element, home = false) => {
+      const main = document.querySelector("main")?.getBoundingClientRect();
+      const rect = element.getBoundingClientRect();
+      if (!main) return positionRef.current;
+      return {
+        x: Math.max(
+          8,
+          Math.min(
+            main.width - 112,
+            rect.left - main.left + (home ? rect.width + 18 : rect.width * 0.45),
+          ),
+        ),
+        y: Math.max(78, rect.top - main.top - 78),
+      };
+    };
+    const home = () => {
+      const clock = document.querySelector(".datetime");
+      return clock ? locate(clock, true) : { x: 230, y: 105 };
+    };
+    const settle = (next: { x: number; y: number }, nextPose: CatPose) => {
+      positionRef.current = next;
+      setPosition(next);
+      setPose(nextPose);
+    };
+    const travel = async (target: { x: number; y: number }) => {
+      const element = catRef.current;
+      if (!element || cancelled) return;
+      const start = positionRef.current;
+      const distance = Math.hypot(target.x - start.x, target.y - start.y);
+      setFacingLeft(target.x < start.x);
+      setPose(distance > 220 ? "jump" : "walk");
+      const lift = Math.min(82, Math.max(30, distance * 0.18));
+      const animation = element.animate(
+        [
+          { transform: `translate3d(${start.x}px, ${start.y}px, 0)` },
+          {
+            transform: `translate3d(${(start.x + target.x) / 2}px, ${Math.min(start.y, target.y) - lift}px, 0)`,
+            offset: 0.52,
+          },
+          { transform: `translate3d(${target.x}px, ${target.y}px, 0)` },
+        ],
+        {
+          duration: Math.min(2200, Math.max(900, distance * 3.2)),
+          easing: "cubic-bezier(.36,.05,.2,1)",
+        },
+      );
+      try {
+        await animation.finished;
+      } catch {
+        return;
+      }
+      if (!cancelled) settle(target, Math.random() < 0.18 ? "groom" : "idle");
+    };
+    const chooseNext = async () => {
+      if (cancelled || document.hidden) return;
+      if (resting) {
+        await travel(home());
+        if (!cancelled) setPose("sleep");
+        return;
+      }
+      const platforms = Array.from(
+        document.querySelectorAll(".widget .widget-top"),
+      ).filter((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.width > 150 && rect.bottom > 76 && rect.top < innerHeight - 60;
+      });
+      const useHome = platforms.length === 0 || Math.random() < 0.28;
+      const target = useHome
+        ? home()
+        : locate(platforms[Math.floor(Math.random() * platforms.length)]);
+      await travel(target);
+      if (!cancelled && Math.random() < 0.12) setPose("sleep");
+    };
+    const initial = home();
+    settle(initial, resting ? "sleep" : "idle");
+    const schedule = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(async () => {
+        await chooseNext();
+        if (!cancelled) schedule();
+      }, resting ? 12000 : 6500 + Math.random() * 7000);
+    };
+    const visibility = () => {
+      if (document.hidden) {
+        catRef.current?.getAnimations().forEach((animation) => animation.pause());
+      } else {
+        catRef.current?.getAnimations().forEach((animation) => animation.play());
+        schedule();
+      }
+    };
+    document.addEventListener("visibilitychange", visibility);
+    schedule();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      catRef.current?.getAnimations().forEach((animation) => animation.cancel());
+      document.removeEventListener("visibilitychange", visibility);
+    };
+  }, [enabled, resting]);
+
+  if (!enabled) return null;
+  return (
+    <div
+      ref={catRef}
+      className={`dashboard-cat cat-${pose} ${facingLeft ? "facing-left" : ""}`}
+      style={{
+        transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
+      }}
+      aria-label="대시보드를 돌아다니는 치즈냥이"
+      title="치즈냥이"
+    >
+      <span
+        style={{
+          backgroundImage: `url(${import.meta.env.BASE_URL}assets/cheese-cat-sprites.webp)`,
+        }}
+      />
+    </div>
+  );
+}
+
 export default function Home() {
   const [store, setStore] = useState<Store>(() => {
     if (typeof window === "undefined") return initial;
@@ -1160,9 +1305,7 @@ export default function Home() {
       form.get("countdownFontSize") || modalWidget?.data.countdownFontSize || 56,
     );
     const data =
-      type === "fish"
-        ? { fishSpecies: "tropical" }
-        : type === "timer"
+      type === "timer"
           ? {
               timerMinutes: Number(form.get("timerMinutes") || 25),
               timerRemaining: Number(form.get("timerMinutes") || 25) * 60,
@@ -1249,8 +1392,6 @@ export default function Home() {
             ? { width: 320, height: 350 }
             : type === "todolist"
               ? { width: 360, height: 300 }
-              : type === "fish"
-                ? { width: 180, height: 80 }
             : type === "weather"
               ? { width: 330, height: 270 }
               : type === "bookmark"
@@ -1287,14 +1428,8 @@ export default function Home() {
                 ...make(type, title, 0, 0, data).layout,
                 x: 80 + (visibleWidgets.length % 4) * 40,
                 y: 80 + (visibleWidgets.length % 5) * 40,
-                width:
-                  type === "fish"
-                    ? contentMinimum.width
-                    : Math.max(preset.width, contentMinimum.width),
-                height:
-                  type === "fish"
-                    ? contentMinimum.height
-                    : Math.max(preset.height, contentMinimum.height),
+                width: Math.max(preset.width, contentMinimum.width),
+                height: Math.max(preset.height, contentMinimum.height),
                 zIndex:
                   Math.max(0, ...s.widgets.map((w) => w.layout.zIndex)) + 1,
               },
@@ -1400,6 +1535,22 @@ export default function Home() {
           </b>
           <small>{clock.getFullYear()}</small>
         </div>
+        <label className="cat-toggle">
+          <input
+            type="checkbox"
+            checked={store.settings.catEnabled}
+            onChange={(event) =>
+              setStore((state) => ({
+                ...state,
+                settings: {
+                  ...state.settings,
+                  catEnabled: event.target.checked,
+                },
+              }))
+            }
+          />
+          <span>CAT</span>
+        </label>
         <div className="stats-spacer" />
         <div className="widget-create">
           <button className="widget-create-trigger">WIDGET＋</button>
@@ -1414,7 +1565,6 @@ export default function Home() {
                 "calendar",
                 "timer",
                 "countdown",
-                "fish",
               ] as Kind[]
             ).map((type) => (
               <button
@@ -1617,7 +1767,6 @@ export default function Home() {
                         "calendar",
                         "timer",
                         "countdown",
-                        "fish",
                       ] as Kind[]
                     ).map((type) => (
                       <label key={type}>
@@ -1638,8 +1787,6 @@ export default function Home() {
                                       ? "◷"
                                       : type === "countdown"
                                         ? "D"
-                                        : type === "fish"
-                                          ? "🐠"
                                         : "⚡"}
                         </span>
                         <strong>{type.toUpperCase()}</strong>
@@ -2016,7 +2163,7 @@ export default function Home() {
                     </>
                   ) : (
                     <>
-                      {w.type !== "calendar" && w.type !== "fish" && w.title && (
+                      {w.type !== "calendar" && w.title && (
                         <h2
                           className="widget-title"
                           style={{ borderBottomColor: w.style.borderColor }}
@@ -2086,13 +2233,6 @@ export default function Home() {
                       {w.type === "countdown" && (
                         <CountdownWidget widget={w} />
                       )}
-                      {w.type === "fish" && (
-                        <div className="fish-content" aria-label="헤엄치는 열대어">
-                          <span role="img" aria-hidden="true">
-                            🐠
-                          </span>
-                        </div>
-                      )}
                     </>
                   )}
                 </div>
@@ -2129,7 +2269,7 @@ export default function Home() {
             <h2>
               {modalWidget
                 ? "위젯 수정"
-                : `새 ${modal.type === "bookmark" ? "북마크" : modal.type === "note" ? "메모" : modal.type === "todo" ? "할 일" : modal.type === "todolist" ? "TODO LIST" : modal.type === "weather" ? "날씨" : modal.type === "calendar" ? "달력" : modal.type === "timer" ? "학습 타이머" : modal.type === "countdown" ? "카운트다운" : modal.type === "fish" ? "열대어" : "위젯"}`}
+                : `새 ${modal.type === "bookmark" ? "북마크" : modal.type === "note" ? "메모" : modal.type === "todo" ? "할 일" : modal.type === "todolist" ? "TODO LIST" : modal.type === "weather" ? "날씨" : modal.type === "calendar" ? "달력" : modal.type === "timer" ? "학습 타이머" : modal.type === "countdown" ? "카운트다운" : "위젯"}`}
             </h2>
             {modal.type !== "calendar" && (
               <label>
@@ -2142,11 +2282,7 @@ export default function Home() {
                   autoFocus
                   defaultValue={
                     modalWidget?.title ||
-                    (modal.type === "todolist"
-                      ? "TODO LIST"
-                      : modal.type === "fish"
-                        ? "열대어"
-                        : "")
+                    (modal.type === "todolist" ? "TODO LIST" : "")
                   }
                   placeholder="제목을 입력하세요"
                 />
@@ -2288,6 +2424,10 @@ export default function Home() {
           {toast}
         </div>
       )}
+      <DashboardCat
+        enabled={store.settings.catEnabled}
+        resting={settingsOpen || Boolean(modal)}
+      />
     </main>
   );
 }
