@@ -947,6 +947,7 @@ function DashboardCat({
   const catRef = useRef<HTMLDivElement>(null);
   const positionRef = useRef({ x: 230, y: 105 });
   const platformRef = useRef("home");
+  const destinationRef = useRef("");
   const movementRef = useRef<Animation | null>(null);
   const [position, setPosition] = useState(positionRef.current);
   const [pose, setPose] = useState<CatPose>("idle");
@@ -960,7 +961,7 @@ function DashboardCat({
     const boundaryY = () => {
       const main = document.querySelector("main")?.getBoundingClientRect();
       const bar = document.querySelector(".canvas-label")?.getBoundingClientRect();
-      return main && bar ? bar.top - main.top - 62 : 160;
+      return main && bar ? bar.top - main.top - 60 : 160;
     };
     const locate = (element: Element, home = false) => {
       const main = document.querySelector("main")?.getBoundingClientRect();
@@ -975,15 +976,8 @@ function DashboardCat({
           ),
         ),
         y: home
-          ? Math.max(62, rect.top - main.top - 62)
-          : Math.max(boundaryY(), rect.top - main.top - 62),
-      };
-    };
-    const home = (): CatTarget => {
-      const clock = document.querySelector(".datetime");
-      return {
-        ...(clock ? locate(clock, true) : { x: 230, y: 105 }),
-        platformId: "home",
+          ? Math.max(60, rect.top - main.top - 60)
+          : Math.max(boundaryY(), rect.top - main.top - 60),
       };
     };
     const workspaceBar = (): CatTarget => {
@@ -994,6 +988,8 @@ function DashboardCat({
     const settle = (next: CatTarget, nextPose: CatPose) => {
       positionRef.current = next;
       platformRef.current = next.platformId;
+      destinationRef.current = "";
+      movementRef.current = null;
       setPosition(next);
       setPose(nextPose);
     };
@@ -1017,8 +1013,17 @@ function DashboardCat({
     const travel = async (target: CatTarget) => {
       const element = catRef.current;
       if (!element || cancelled) return;
+      const computedTransform = getComputedStyle(element).transform;
+      if (movementRef.current && computedTransform !== "none") {
+        const matrix = new DOMMatrixReadOnly(computedTransform);
+        positionRef.current = { x: matrix.m41, y: matrix.m42 };
+        setPosition(positionRef.current);
+        element.style.transform = `translate3d(${matrix.m41}px, ${matrix.m42}px, 0)`;
+      }
       movementRef.current?.cancel();
       const start = positionRef.current;
+      platformRef.current = "airborne";
+      destinationRef.current = target.platformId;
       const distance = Math.hypot(target.x - start.x, target.y - start.y);
       setFacingLeft(target.x < start.x);
       setPose(distance > 220 ? "jump" : "walk");
@@ -1059,7 +1064,7 @@ function DashboardCat({
       await travel(target);
       if (!cancelled && Math.random() < 0.06) setPose("sleep");
     };
-    const initial = home();
+    const initial = workspaceBar();
     settle(initial, "idle");
     const schedule = () => {
       window.clearTimeout(timer);
@@ -1070,7 +1075,11 @@ function DashboardCat({
     };
     const escapeMovingWidget = (event: Event) => {
       const widgetIds = (event as CustomEvent<{ ids: string[] }>).detail.ids;
-      if (!widgetIds.includes(platformRef.current)) return;
+      if (
+        !widgetIds.includes(platformRef.current) &&
+        !widgetIds.includes(destinationRef.current)
+      )
+        return;
       const alternatives = availableWidgets(platformRef.current).filter(
         (target) => !widgetIds.includes(target.platformId),
       );
