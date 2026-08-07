@@ -100,4 +100,6 @@ test("adds a draggable chimp companion with cat interaction", async () => {
   assert.doesNotMatch(styles, /\.chimp-shot/);
   assert.match(styles, /animation: chimp-fire-frames 2\.1s/);
   assert.match(styles, /animation: chimp-hang-frames 2\.4s/);
+  assert.match(styles, /\.chimp-fire\.chimp-side-right > span/);
+  assert.match(styles, /\.chimp-fire\.chimp-side-left > span/);
 });
