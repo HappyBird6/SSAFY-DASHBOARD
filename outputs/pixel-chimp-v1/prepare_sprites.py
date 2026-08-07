@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 
 ROOT = Path(__file__).parent
@@ -40,10 +40,32 @@ def build_atlas(source_path: Path) -> None:
             preview_frame = Image.new("RGBA", (frame_width, CELL))
             preview_frame.alpha_composite(frame, (left_padding, 0))
             frames.append(preview_frame)
-            atlas.alpha_composite(
-                preview_frame,
-                (index * frame_width, 0),
-            )
+
+    if source_path.stem == "fire-v2":
+        # Keep the actual muzzle flash inside the sprite animation for three
+        # consecutive frames so it stays readable at normal playback speed.
+        firing_frame = frames[8].copy()
+        draw = ImageDraw.Draw(firing_frame)
+        draw.polygon(
+            [(96, 82), (83, 84), (75, 76), (72, 85), (56, 82),
+             (64, 92), (54, 101), (72, 99), (75, 109), (84, 100), (96, 102)],
+            fill=(255, 145, 0, 255),
+        )
+        draw.polygon(
+            [(97, 86), (84, 87), (79, 82), (77, 89), (65, 88),
+             (72, 94), (64, 99), (78, 97), (81, 103), (86, 97), (97, 98)],
+            fill=(255, 230, 72, 255),
+        )
+        draw.polygon(
+            [(98, 89), (84, 89), (78, 93), (84, 97), (98, 96)],
+            fill=(255, 255, 238, 255),
+        )
+        frames[7] = firing_frame.copy()
+        frames[8] = firing_frame.copy()
+        frames[9] = firing_frame.copy()
+
+    for index, frame in enumerate(frames):
+        atlas.alpha_composite(frame, (index * frame_width, 0))
 
     OUTPUT.mkdir(exist_ok=True)
     atlas.save(OUTPUT / f"{source_path.stem}.png", optimize=True)

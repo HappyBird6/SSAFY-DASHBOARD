@@ -94,10 +94,9 @@ test("adds a draggable chimp companion with cat interaction", async () => {
   assert.match(source, /document\.documentElement\.dataset\.catPlatform/);
   assert.match(source, /currentCatPlatform !== placement\.widgetId/);
   assert.match(source, /excludeIds: \[placement\.widgetId\]/);
-  assert.match(source, /cooldownRef\.current = Date\.now\(\) \+ 8000/);
+  assert.doesNotMatch(source, /cooldownRef/);
   assert.match(styles, /\.dashboard-chimp/);
   assert.match(styles, /background-size: 2048px 96px/);
-  assert.match(styles, /\.chimp-shot/);
-  assert.match(styles, /\.chimp-shot::before/);
+  assert.doesNotMatch(styles, /\.chimp-shot/);
   assert.match(styles, /animation: chimp-frames 2\.1s/);
 });

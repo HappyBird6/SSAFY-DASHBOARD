@@ -1319,13 +1319,11 @@ function DashboardChimp({
   const callbackRef = useRef(onPlacementChange);
   const draggingRef = useRef(false);
   const catPlatformRef = useRef("");
-  const cooldownRef = useRef(0);
   const fireTimersRef = useRef<number[]>([]);
   const poseRef = useRef<"hang" | "fire">("hang");
   const [pose, setPose] = useState<"hang" | "fire">("hang");
   const [position, setPosition] = useState({ x: -200, y: -200 });
   const [dragging, setDragging] = useState(false);
-  const [shotVisible, setShotVisible] = useState(false);
 
   callbackRef.current = onPlacementChange;
 
@@ -1425,25 +1423,20 @@ function DashboardChimp({
         document.documentElement.dataset.catPlatform || catPlatformRef.current;
       if (
         currentCatPlatform !== placement.widgetId ||
-        poseRef.current === "fire" ||
-        Date.now() < cooldownRef.current
+        poseRef.current === "fire"
       )
         return;
-      cooldownRef.current = Date.now() + 8000;
       showPose("fire");
-      setShotVisible(false);
       fireTimersRef.current.forEach(window.clearTimeout);
       fireTimersRef.current = [
-        window.setTimeout(() => setShotVisible(true), 820),
         window.setTimeout(() => {
           window.dispatchEvent(
             new CustomEvent("dashboard:cat-click", {
               detail: { excludeIds: [placement.widgetId] },
             }),
           );
-        }, 980),
-        window.setTimeout(() => setShotVisible(false), 1420),
-        window.setTimeout(() => showPose("hang"), 2100),
+        }, 1180),
+        window.setTimeout(() => showPose("hang"), 2200),
       ];
     };
     const catPlatformChanged = (event: Event) => {
@@ -1482,7 +1475,6 @@ function DashboardChimp({
           backgroundImage: `url(${import.meta.env.BASE_URL}assets/${pose === "fire" ? "pixel-chimp-fire.webp" : "pixel-chimp-hang.webp"})`,
         }}
       />
-      {shotVisible && <i className="chimp-shot" aria-hidden="true" />}
     </div>
   );
 }
