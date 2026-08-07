@@ -1335,12 +1335,20 @@ button {
   transform: scaleX(-1);
 }
 .chimp-hang > span {
-  animation: chimp-frames 2.4s steps(15) infinite;
+  animation: chimp-hang-frames 2.4s steps(15) infinite;
 }
 .chimp-fire > span {
-  animation: chimp-frames 2.1s steps(15) 1 both;
+  animation: chimp-fire-frames 2.1s steps(15) 1 both;
 }
-@keyframes chimp-frames {
+@keyframes chimp-hang-frames {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: 100%;
+  }
+}
+@keyframes chimp-fire-frames {
   from {
     background-position-x: 0;
   }

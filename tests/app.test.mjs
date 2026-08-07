@@ -98,5 +98,6 @@ test("adds a draggable chimp companion with cat interaction", async () => {
   assert.match(styles, /\.dashboard-chimp/);
   assert.match(styles, /background-size: 2048px 96px/);
   assert.doesNotMatch(styles, /\.chimp-shot/);
-  assert.match(styles, /animation: chimp-frames 2\.1s/);
+  assert.match(styles, /animation: chimp-fire-frames 2\.1s/);
+  assert.match(styles, /animation: chimp-hang-frames 2\.4s/);
 });
