@@ -1061,6 +1061,7 @@ function DashboardCat({
     const settle = (next: CatTarget, nextPose: CatPose) => {
       positionRef.current = next;
       platformRef.current = next.platformId;
+      document.documentElement.dataset.catPlatform = next.platformId;
       destinationRef.current = "";
       movementRef.current = null;
       setPosition(next);
@@ -1111,6 +1112,7 @@ function DashboardCat({
         return;
       }
       platformRef.current = "airborne";
+      document.documentElement.dataset.catPlatform = "airborne";
       destinationRef.current = target.platformId;
       setFacingLeft(target.x < start.x);
       showPose("jump");
@@ -1257,6 +1259,7 @@ function DashboardCat({
     }, 700);
     return () => {
       cancelled = true;
+      delete document.documentElement.dataset.catPlatform;
       movementIdRef.current += 1;
       window.clearTimeout(timer);
       window.clearTimeout(restTimer);
@@ -1375,8 +1378,8 @@ function DashboardChimp({
           const next = {
             x:
               placement.side === "right"
-                ? rect.right - main.left - 94.5
-                : rect.left - main.left - 33.5,
+                ? rect.right - main.left - 33.5
+                : rect.left - main.left - 94.5,
             y: rect.top - main.top - 2,
           };
           setPosition((current) =>
@@ -1418,8 +1421,10 @@ function DashboardChimp({
   useEffect(() => {
     if (!enabled || !placement) return;
     const fire = () => {
+      const currentCatPlatform =
+        document.documentElement.dataset.catPlatform || catPlatformRef.current;
       if (
-        catPlatformRef.current !== placement.widgetId ||
+        currentCatPlatform !== placement.widgetId ||
         poseRef.current === "fire" ||
         Date.now() < cooldownRef.current
       )
@@ -1429,16 +1434,16 @@ function DashboardChimp({
       setShotVisible(false);
       fireTimersRef.current.forEach(window.clearTimeout);
       fireTimersRef.current = [
-        window.setTimeout(() => setShotVisible(true), 470),
+        window.setTimeout(() => setShotVisible(true), 820),
         window.setTimeout(() => {
           window.dispatchEvent(
             new CustomEvent("dashboard:cat-click", {
               detail: { excludeIds: [placement.widgetId] },
             }),
           );
-        }, 520),
-        window.setTimeout(() => setShotVisible(false), 650),
-        window.setTimeout(() => showPose("hang"), 1050),
+        }, 980),
+        window.setTimeout(() => setShotVisible(false), 1420),
+        window.setTimeout(() => showPose("hang"), 2100),
       ];
     };
     const catPlatformChanged = (event: Event) => {
