@@ -11,7 +11,7 @@ test("includes the core dashboard capabilities", async () => {
     '"bookmark"',
     '"note"',
     '"todo"',
-    "WIDGET＋",
+    "WIDGET竊?,
     "LOCAL STORAGE",
     "backupSchema",
     "interact(",
@@ -38,3 +38,16 @@ test("keeps the dashboard cat in exactly one sprite state", async () => {
   assert.match(source, /catAnimationSpeed: 0\.5/);
   assert.match(source, /type="range"/);
 });
+
+test("moves the cat with sampled ballistic motion", async () => {
+  const source = await readFile(
+    new URL("../app/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /initialVelocityY \* elapsed/);
+  assert.match(source, /0\.5 \* gravity \* elapsed \* elapsed/);
+  assert.match(source, /Math\.round\(flightSeconds \* 60\)/);
+  assert.doesNotMatch(source, /cubic-bezier\(\.36,\.05,\.2,1\)/);
+});
+
