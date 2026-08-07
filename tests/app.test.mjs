@@ -11,7 +11,7 @@ test("includes the core dashboard capabilities", async () => {
     '"bookmark"',
     '"note"',
     '"todo"',
-    "WIDGET竊?,
+    "WIDGET＋",
     "LOCAL STORAGE",
     "backupSchema",
     "interact(",
@@ -51,3 +51,16 @@ test("moves the cat with sampled ballistic motion", async () => {
   assert.doesNotMatch(source, /cubic-bezier\(\.36,\.05,\.2,1\)/);
 });
 
+test("keeps cat landings stable and away from widget corners", async () => {
+  const source = await readFile(
+    new URL("../app/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /0\.1 \+ Math\.random\(\) \* 0\.8/);
+  assert.match(source, /rect\.width \* landingRatio - 48/);
+  assert.match(source, /target\.platformId === platformRef\.current && distance < 1/);
+  assert.match(source, /platformRef\.current !== "workspace-bar"\) await travel/);
+  assert.match(source, /fill: "forwards"/);
+  assert.match(source, /animation\.commitStyles\(\)/);
+});
