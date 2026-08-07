@@ -937,15 +937,27 @@ function BookmarkLinksEditor({ widget }: { widget?: Widget }) {
   );
 }
 
-type CatPose = "idle" | "walk" | "jump" | "groom" | "sleep";
+type CatPose = "sit" | "crouch" | "loaf" | "jump" | "groom" | "wheel";
 
 const CAT_SPRITES: Record<CatPose, string> = {
-  idle: "cheese-cat-idle.webp",
-  walk: "cheese-cat-walk.webp",
-  jump: "cheese-cat-jump.webp",
-  groom: "cheese-cat-rest.webp",
-  sleep: "cheese-cat-rest.webp",
+  sit: "pixel-cat-sit.webp",
+  crouch: "pixel-cat-crouch.webp",
+  loaf: "pixel-cat-loaf.webp",
+  jump: "pixel-cat-jump.webp",
+  groom: "pixel-cat-groom.webp",
+  wheel: "pixel-cat-wheel.webp",
 };
+
+const CAT_PLATFORM_OFFSET = 73;
+const CAT_REST_POSES: CatPose[] = [
+  "sit",
+  "sit",
+  "sit",
+  "crouch",
+  "loaf",
+  "groom",
+  "wheel",
+];
 
 function DashboardCat({
   enabled,
@@ -957,8 +969,9 @@ function DashboardCat({
   const platformRef = useRef("home");
   const destinationRef = useRef("");
   const movementRef = useRef<Animation | null>(null);
+  const movementIdRef = useRef(0);
   const [position, setPosition] = useState(positionRef.current);
-  const [pose, setPose] = useState<CatPose>("idle");
+  const [pose, setPose] = useState<CatPose>("sit");
   const [facingLeft, setFacingLeft] = useState(false);
 
   useEffect(() => {
@@ -969,7 +982,7 @@ function DashboardCat({
     const boundaryY = () => {
       const main = document.querySelector("main")?.getBoundingClientRect();
       const bar = document.querySelector(".canvas-label")?.getBoundingClientRect();
-      return main && bar ? bar.top - main.top - 60 : 160;
+      return main && bar ? bar.top - main.top - CAT_PLATFORM_OFFSET : 147;
     };
     const locate = (element: Element, home = false) => {
       const main = document.querySelector("main")?.getBoundingClientRect();
@@ -984,8 +997,11 @@ function DashboardCat({
           ),
         ),
         y: home
-          ? Math.max(60, rect.top - main.top - 60)
-          : Math.max(boundaryY(), rect.top - main.top - 60),
+          ? Math.max(48, rect.top - main.top - CAT_PLATFORM_OFFSET)
+          : Math.max(
+              boundaryY(),
+              rect.top - main.top - CAT_PLATFORM_OFFSET,
+            ),
       };
     };
     const workspaceBar = (): CatTarget => {
@@ -1021,6 +1037,7 @@ function DashboardCat({
     const travel = async (target: CatTarget) => {
       const element = catRef.current;
       if (!element || cancelled) return;
+      const movementId = ++movementIdRef.current;
       const computedTransform = getComputedStyle(element).transform;
       if (movementRef.current && computedTransform !== "none") {
         const matrix = new DOMMatrixReadOnly(computedTransform);
@@ -1034,7 +1051,7 @@ function DashboardCat({
       destinationRef.current = target.platformId;
       const distance = Math.hypot(target.x - start.x, target.y - start.y);
       setFacingLeft(target.x < start.x);
-      setPose(distance > 220 ? "jump" : "walk");
+      setPose("jump");
       const lift = Math.min(82, Math.max(30, distance * 0.18));
       const safeArcY = Math.max(
         boundaryY(),
@@ -1060,7 +1077,11 @@ function DashboardCat({
       } catch {
         return;
       }
-      if (!cancelled) settle(target, Math.random() < 0.08 ? "groom" : "idle");
+      if (!cancelled && movementId === movementIdRef.current) {
+        const nextPose =
+          CAT_REST_POSES[Math.floor(Math.random() * CAT_REST_POSES.length)];
+        settle(target, nextPose);
+      }
     };
     const chooseNext = async () => {
       if (cancelled || document.hidden) return;
@@ -1070,10 +1091,9 @@ function DashboardCat({
           ? workspaceBar()
           : platforms[Math.floor(Math.random() * platforms.length)];
       await travel(target);
-      if (!cancelled && Math.random() < 0.06) setPose("sleep");
     };
     const initial = workspaceBar();
-    settle(initial, "idle");
+    settle(initial, "sit");
     const schedule = () => {
       window.clearTimeout(timer);
       timer = window.setTimeout(async () => {
@@ -1126,6 +1146,7 @@ function DashboardCat({
     schedule();
     return () => {
       cancelled = true;
+      movementIdRef.current += 1;
       window.clearTimeout(timer);
       movementRef.current?.cancel();
       catRef.current?.getAnimations().forEach((animation) => animation.cancel());

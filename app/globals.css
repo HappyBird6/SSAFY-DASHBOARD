@@ -1247,8 +1247,8 @@ button {
   position: absolute;
   left: 0;
   top: 0;
-  width: 83.2px;
-  height: 62.4px;
+  width: 76.8px;
+  height: 76.8px;
   z-index: 2147481500;
   pointer-events: none;
   transform-origin: 50% 100%;
@@ -1257,31 +1257,24 @@ button {
 }
 .dashboard-cat > span {
   display: block;
-  width: 83.2px;
-  height: 62.4px;
+  width: 76.8px;
+  height: 76.8px;
   background-repeat: no-repeat;
-  background-size: 1331.2px 62.4px;
+  background-size: 1228.8px 76.8px;
   background-position: 0 0;
   transform-origin: center bottom;
+  image-rendering: pixelated;
 }
 .dashboard-cat.facing-left > span {
   transform: scaleX(-1);
 }
-.cat-walk > span {
-  animation: cat-frames 0.56s steps(15) infinite;
-}
-.cat-idle > span {
-  animation: cat-frames 3.6s steps(15) infinite;
-}
-.cat-jump > span {
-  animation: cat-frames 0.6s steps(15) infinite;
-}
-.cat-groom > span {
-  animation: cat-frames 4.8s steps(15) 1 forwards;
-}
-.cat-sleep > span {
-  background-position: 100% 0;
-  animation: cat-breathe 2.8s ease-in-out infinite;
+.cat-sit > span,
+.cat-crouch > span,
+.cat-loaf > span,
+.cat-jump > span,
+.cat-groom > span,
+.cat-wheel > span {
+  animation: cat-frames 1s steps(15) infinite;
 }
 @keyframes cat-frames {
   from {
@@ -1289,23 +1282,6 @@ button {
   }
   to {
     background-position-x: 100%;
-  }
-}
-@keyframes cat-breathe {
-  50% {
-    transform: translateY(2px) scale(1.012, 0.988);
-  }
-}
-.dashboard-cat.facing-left.cat-sleep > span {
-  animation-name: cat-breathe-left;
-}
-@keyframes cat-breathe-left {
-  0%,
-  100% {
-    transform: scaleX(-1);
-  }
-  50% {
-    transform: scaleX(-1) translateY(2px) scale(1.012, 0.988);
   }
 }
 @media (prefers-reduced-motion: reduce) {
