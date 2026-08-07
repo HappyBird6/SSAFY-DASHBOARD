@@ -60,6 +60,7 @@ type Widget = {
 type Workspace = { id: string; name: string };
 type SizePreset = { id: string; name: string; width: number; height: number };
 type Theme = "dark" | "light" | "blue";
+type ChimpPlacement = { widgetId: string; side: "left" | "right" };
 type Store = {
   version: 2;
   exportedAt: string;
@@ -71,6 +72,8 @@ type Store = {
     theme: Theme;
     catEnabled: boolean;
     catAnimationSpeed: number;
+    chimpEnabled: boolean;
+    chimpPlacements: Record<string, ChimpPlacement>;
   };
   workspaces: Workspace[];
   activeWorkspaceId: string;
@@ -110,6 +113,15 @@ const backupSchema = z.object({
     theme: z.enum(["dark", "light", "blue"]).optional(),
     catEnabled: z.boolean().optional(),
     catAnimationSpeed: z.number().min(0.25).max(1.25).optional(),
+    chimpEnabled: z.boolean().optional(),
+    chimpPlacements: z
+      .record(
+        z.object({
+          widgetId: z.string(),
+          side: z.enum(["left", "right"]),
+        }),
+      )
+      .optional(),
   }),
   workspaces: z
     .array(z.object({ id: z.string(), name: z.string() }))
@@ -238,6 +250,8 @@ const initial: Store = {
     theme: "dark",
     catEnabled: true,
     catAnimationSpeed: 0.5,
+    chimpEnabled: true,
+    chimpPlacements: {},
   },
   workspaces: [{ id: MAIN_WORKSPACE, name: "MAIN" }],
   activeWorkspaceId: MAIN_WORKSPACE,
@@ -288,6 +302,8 @@ const normalizeStore = (value: unknown): Store => {
         1.25,
         Math.max(0.25, parsed.settings.catAnimationSpeed ?? 0.5),
       ),
+      chimpEnabled: parsed.settings.chimpEnabled ?? true,
+      chimpPlacements: parsed.settings.chimpPlacements || {},
     },
     workspaces,
     activeWorkspaceId,
@@ -1049,6 +1065,11 @@ function DashboardCat({
       movementRef.current = null;
       setPosition(next);
       showPose(nextPose);
+      window.dispatchEvent(
+        new CustomEvent("dashboard:cat-platform", {
+          detail: { platformId: next.platformId },
+        }),
+      );
     };
     const availableWidgets = (excludedId?: string): CatTarget[] =>
       Array.from(document.querySelectorAll<HTMLElement>(".widget .widget-top"))
@@ -1154,9 +1175,12 @@ function DashboardCat({
         scheduleRestPose(1800 + Math.random() * 2200);
       }
     };
-    const chooseNext = async () => {
+    const chooseNext = async (excludedIds: string[] = []) => {
       if (cancelled || document.hidden) return;
-      const platforms = availableWidgets(platformRef.current);
+      const excluded = new Set(excludedIds);
+      const platforms = availableWidgets(platformRef.current).filter(
+        (target) => !excluded.has(target.platformId),
+      );
       if (platforms.length === 0 && platformRef.current === "workspace-bar")
         return;
       const target =
@@ -1205,11 +1229,13 @@ function DashboardCat({
         if (!cancelled) schedule();
       }, 7000);
     };
-    const sendCatAway = async () => {
+    const sendCatAway = async (event: Event) => {
       if (platformRef.current === "airborne") return;
       window.clearTimeout(timer);
       window.clearTimeout(restTimer);
-      await chooseNext();
+      const excludedIds =
+        (event as CustomEvent<{ excludeIds?: string[] }>).detail?.excludeIds || [];
+      await chooseNext(excludedIds);
       if (!cancelled) schedule();
     };
     const visibility = () => {
@@ -1269,6 +1295,189 @@ function DashboardCat({
           backgroundImage: `url(${import.meta.env.BASE_URL}assets/${CAT_SPRITES[pose]})`,
         }}
       />
+    </div>
+  );
+}
+
+function DashboardChimp({
+  enabled,
+  workspaceId,
+  placement,
+  widgetIds,
+  onPlacementChange,
+}: {
+  enabled: boolean;
+  workspaceId: string;
+  placement?: ChimpPlacement;
+  widgetIds: string[];
+  onPlacementChange: (placement: ChimpPlacement) => void;
+}) {
+  const chimpRef = useRef<HTMLDivElement>(null);
+  const callbackRef = useRef(onPlacementChange);
+  const draggingRef = useRef(false);
+  const catPlatformRef = useRef("");
+  const cooldownRef = useRef(0);
+  const fireTimersRef = useRef<number[]>([]);
+  const poseRef = useRef<"hang" | "fire">("hang");
+  const [pose, setPose] = useState<"hang" | "fire">("hang");
+  const [position, setPosition] = useState({ x: -200, y: -200 });
+  const [dragging, setDragging] = useState(false);
+  const [shotVisible, setShotVisible] = useState(false);
+
+  callbackRef.current = onPlacementChange;
+
+  const showPose = (nextPose: "hang" | "fire") => {
+    poseRef.current = nextPose;
+    setPose(nextPose);
+  };
+
+  const finishDrag = (clientX: number, clientY: number) => {
+    if (!draggingRef.current) return;
+    const widgets = Array.from(
+      document.querySelectorAll<HTMLElement>(".widget"),
+    ).filter((element) => widgetIds.includes(element.dataset.id || ""));
+    const nearest = widgets
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        const leftDistance = Math.hypot(clientX - rect.left, clientY - rect.top);
+        const rightDistance = Math.hypot(clientX - rect.right, clientY - rect.top);
+        return {
+          widgetId: element.dataset.id || "",
+          side: leftDistance < rightDistance ? "left" as const : "right" as const,
+          distance: Math.min(leftDistance, rightDistance),
+        };
+      })
+      .sort((a, b) => a.distance - b.distance)[0];
+    if (nearest)
+      callbackRef.current({ widgetId: nearest.widgetId, side: nearest.side });
+    draggingRef.current = false;
+    setDragging(false);
+  };
+
+  useEffect(() => {
+    if (!enabled || widgetIds.length === 0) return;
+    if (!placement || !widgetIds.includes(placement.widgetId)) {
+      callbackRef.current({ widgetId: widgetIds[0], side: "right" });
+    }
+  }, [enabled, placement, widgetIds, workspaceId]);
+
+  useEffect(() => {
+    if (!enabled || !placement) return;
+    let animationFrame = 0;
+    const followWidget = () => {
+      if (!draggingRef.current) {
+        const main = document.querySelector("main")?.getBoundingClientRect();
+        const widget = Array.from(
+          document.querySelectorAll<HTMLElement>(".widget"),
+        ).find((element) => element.dataset.id === placement.widgetId);
+        if (main && widget) {
+          const rect = widget.getBoundingClientRect();
+          const next = {
+            x:
+              placement.side === "right"
+                ? rect.right - main.left - 94.5
+                : rect.left - main.left - 33.5,
+            y: rect.top - main.top - 2,
+          };
+          setPosition((current) =>
+            Math.abs(current.x - next.x) < 0.2 &&
+            Math.abs(current.y - next.y) < 0.2
+              ? current
+              : next,
+          );
+        }
+      }
+      animationFrame = requestAnimationFrame(followWidget);
+    };
+    animationFrame = requestAnimationFrame(followWidget);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [enabled, placement]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const move = (event: PointerEvent) => {
+      if (!draggingRef.current) return;
+      const main = document.querySelector("main")?.getBoundingClientRect();
+      if (!main) return;
+      setPosition({
+        x: event.clientX - main.left - 64,
+        y: event.clientY - main.top - 18,
+      });
+    };
+    const end = (event: PointerEvent) => finishDrag(event.clientX, event.clientY);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+    };
+  }, [enabled, widgetIds]);
+
+  useEffect(() => {
+    if (!enabled || !placement) return;
+    const fire = () => {
+      if (
+        catPlatformRef.current !== placement.widgetId ||
+        poseRef.current === "fire" ||
+        Date.now() < cooldownRef.current
+      )
+        return;
+      cooldownRef.current = Date.now() + 8000;
+      showPose("fire");
+      setShotVisible(false);
+      fireTimersRef.current.forEach(window.clearTimeout);
+      fireTimersRef.current = [
+        window.setTimeout(() => setShotVisible(true), 470),
+        window.setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent("dashboard:cat-click", {
+              detail: { excludeIds: [placement.widgetId] },
+            }),
+          );
+        }, 520),
+        window.setTimeout(() => setShotVisible(false), 650),
+        window.setTimeout(() => showPose("hang"), 1050),
+      ];
+    };
+    const catPlatformChanged = (event: Event) => {
+      catPlatformRef.current = (
+        event as CustomEvent<{ platformId: string }>
+      ).detail.platformId;
+      fire();
+    };
+    const placementCheck = window.setTimeout(fire, 80);
+    window.addEventListener("dashboard:cat-platform", catPlatformChanged);
+    return () => {
+      window.clearTimeout(placementCheck);
+      fireTimersRef.current.forEach(window.clearTimeout);
+      window.removeEventListener("dashboard:cat-platform", catPlatformChanged);
+    };
+  }, [enabled, placement]);
+
+  if (!enabled || !placement || widgetIds.length === 0) return null;
+
+  return (
+    <div
+      ref={chimpRef}
+      className={`dashboard-chimp chimp-${pose} chimp-side-${placement.side} ${dragging ? "is-dragging" : ""}`}
+      style={{ transform: `translate3d(${position.x}px, ${position.y}px, 0)` }}
+      onPointerDown={(event) => {
+        if (poseRef.current === "fire") return;
+        event.preventDefault();
+        draggingRef.current = true;
+        setDragging(true);
+      }}
+      aria-label="위젯 모서리에 매달린 침팬지"
+      title="드래그해서 다른 위젯으로 옮기기"
+    >
+      <span
+        style={{
+          backgroundImage: `url(${import.meta.env.BASE_URL}assets/${pose === "fire" ? "pixel-chimp-fire.webp" : "pixel-chimp-hang.webp"})`,
+        }}
+      />
+      {shotVisible && <i className="chimp-shot" aria-hidden="true" />}
     </div>
   );
 }
@@ -1472,6 +1681,10 @@ export default function Home() {
     () =>
       store.widgets.filter((w) => w.workspaceId === store.activeWorkspaceId),
     [store.widgets, store.activeWorkspaceId],
+  );
+  const visibleWidgetIds = useMemo(
+    () => visibleWidgets.map((widget) => widget.id),
+    [visibleWidgets],
   );
   const modalWidget = modal?.widgetId
     ? store.widgets.find((w) => w.id === modal.widgetId)
@@ -2197,6 +2410,27 @@ export default function Home() {
                     </label>
                     <label>
                       <div>
+                        <strong>매달린 침팬지</strong>
+                        <p>
+                          직접 드래그해 위젯 모서리에 배치할 수 있는 동료입니다.
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={store.settings.chimpEnabled}
+                        onChange={(event) =>
+                          setStore((state) => ({
+                            ...state,
+                            settings: {
+                              ...state.settings,
+                              chimpEnabled: event.target.checked,
+                            },
+                          }))
+                        }
+                      />
+                    </label>
+                    <label>
+                      <div>
                         <strong>고양이 애니메이션 속도</strong>
                         <p>모든 행동의 재생 속도를 동일한 비율로 조절합니다.</p>
                       </div>
@@ -2678,6 +2912,26 @@ export default function Home() {
       <DashboardCat
         enabled={store.settings.catEnabled}
         speed={store.settings.catAnimationSpeed}
+      />
+      <DashboardChimp
+        enabled={store.settings.chimpEnabled}
+        workspaceId={store.activeWorkspaceId}
+        placement={
+          store.settings.chimpPlacements[store.activeWorkspaceId]
+        }
+        widgetIds={visibleWidgetIds}
+        onPlacementChange={(nextPlacement) =>
+          setStore((state) => ({
+            ...state,
+            settings: {
+              ...state.settings,
+              chimpPlacements: {
+                ...state.settings.chimpPlacements,
+                [state.activeWorkspaceId]: nextPlacement,
+              },
+            },
+          }))
+        }
       />
     </main>
   );

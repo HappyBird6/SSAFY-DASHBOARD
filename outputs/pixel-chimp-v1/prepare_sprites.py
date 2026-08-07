@@ -14,7 +14,13 @@ CELL = 192
 
 def build_atlas(source_path: Path) -> None:
     source = Image.open(source_path).convert("RGBA")
-    atlas = Image.new("RGBA", (CELL * COLS * ROWS, CELL))
+    frame_width = (
+        256
+        if source_path.stem == "fire-v2" or source_path.stem.endswith("-wide")
+        else CELL
+    )
+    left_padding = frame_width - CELL
+    atlas = Image.new("RGBA", (frame_width * COLS * ROWS, CELL))
     frames: list[Image.Image] = []
     source_cell_w = source.width / COLS
     source_cell_h = source.height / ROWS
@@ -31,8 +37,13 @@ def build_atlas(source_path: Path) -> None:
             frame = source.crop(box).resize(
                 (CELL, CELL), Image.Resampling.NEAREST
             )
-            frames.append(frame)
-            atlas.alpha_composite(frame, (index * CELL, 0))
+            preview_frame = Image.new("RGBA", (frame_width, CELL))
+            preview_frame.alpha_composite(frame, (left_padding, 0))
+            frames.append(preview_frame)
+            atlas.alpha_composite(
+                preview_frame,
+                (index * frame_width, 0),
+            )
 
     OUTPUT.mkdir(exist_ok=True)
     atlas.save(OUTPUT / f"{source_path.stem}.png", optimize=True)

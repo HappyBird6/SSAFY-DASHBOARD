@@ -78,3 +78,22 @@ test("supports direct cat interaction and idle changes on one platform", async (
   assert.match(source, /candidate !== poseRef\.current/);
   assert.match(source, /}, 700\);/);
 });
+
+test("adds a draggable chimp companion with cat interaction", async () => {
+  const [source, styles] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(source, /chimpPlacements/);
+  assert.match(source, /pixel-chimp-hang\.webp/);
+  assert.match(source, /pixel-chimp-fire\.webp/);
+  assert.match(source, /window\.addEventListener\("pointermove"/);
+  assert.match(source, /window\.addEventListener\("pointerup"/);
+  assert.match(source, /dashboard:cat-platform/);
+  assert.match(source, /excludeIds: \[placement\.widgetId\]/);
+  assert.match(source, /cooldownRef\.current = Date\.now\(\) \+ 8000/);
+  assert.match(styles, /\.dashboard-chimp/);
+  assert.match(styles, /background-size: 2048px 96px/);
+  assert.match(styles, /\.chimp-shot/);
+});

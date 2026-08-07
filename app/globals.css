@@ -1304,10 +1304,85 @@ button {
     background-position-x: 100%;
   }
 }
+.dashboard-chimp {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 128px;
+  height: 96px;
+  z-index: 2147481400;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  will-change: transform;
+  filter: drop-shadow(0 6px 4px #0005);
+}
+.dashboard-chimp.is-dragging {
+  cursor: grabbing;
+  filter: drop-shadow(0 9px 7px #0008);
+}
+.dashboard-chimp > span {
+  display: block;
+  width: 128px;
+  height: 96px;
+  background-repeat: no-repeat;
+  background-size: 2048px 96px;
+  background-position: 0 0;
+  transform-origin: center;
+  image-rendering: pixelated;
+}
+.dashboard-chimp.chimp-side-left > span {
+  transform: scaleX(-1);
+}
+.chimp-hang > span {
+  animation: chimp-frames 2.4s steps(15) infinite;
+}
+.chimp-fire > span {
+  animation: chimp-frames 1.05s steps(15) 1 both;
+}
+.chimp-shot {
+  position: absolute;
+  top: 46px;
+  width: 82px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, #ffe58a, #fff);
+  box-shadow: 0 0 6px #ffcc66aa;
+  animation: chimp-shot 180ms ease-out both;
+}
+.chimp-side-right .chimp-shot {
+  right: 92px;
+}
+.chimp-side-left .chimp-shot {
+  left: 92px;
+  transform: scaleX(-1);
+}
+@keyframes chimp-frames {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: 100%;
+  }
+}
+@keyframes chimp-shot {
+  from {
+    opacity: 1;
+    scale: 0.18 1;
+  }
+  to {
+    opacity: 0;
+    scale: 1 0.4;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .dashboard-cat > span {
     animation: none !important;
     background-position: 0 0;
+  }
+  .dashboard-chimp > span,
+  .chimp-shot {
+    animation: none !important;
   }
 }
 .widget textarea {
