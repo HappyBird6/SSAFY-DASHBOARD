@@ -939,6 +939,14 @@ function BookmarkLinksEditor({ widget }: { widget?: Widget }) {
 
 type CatPose = "idle" | "walk" | "jump" | "groom" | "sleep";
 
+const CAT_SPRITES: Record<CatPose, string> = {
+  idle: "cheese-cat-idle.webp",
+  walk: "cheese-cat-walk.webp",
+  jump: "cheese-cat-jump.webp",
+  groom: "cheese-cat-rest.webp",
+  sleep: "cheese-cat-rest.webp",
+};
+
 function DashboardCat({
   enabled,
 }: {
@@ -1141,7 +1149,7 @@ function DashboardCat({
     >
       <span
         style={{
-          backgroundImage: `url(${import.meta.env.BASE_URL}assets/cheese-cat-sprites.webp)`,
+          backgroundImage: `url(${import.meta.env.BASE_URL}assets/${CAT_SPRITES[pose]})`,
         }}
       />
     </div>

@@ -1260,30 +1260,27 @@ button {
   width: 83.2px;
   height: 62.4px;
   background-repeat: no-repeat;
-  background-size: 665.6px 249.6px;
+  background-size: 1331.2px 62.4px;
+  background-position: 0 0;
   transform-origin: center bottom;
 }
 .dashboard-cat.facing-left > span {
   transform: scaleX(-1);
 }
 .cat-walk > span {
-  background-position-y: 0;
-  animation: cat-frames 0.72s steps(7) infinite;
+  animation: cat-frames 0.56s steps(15) infinite;
 }
 .cat-idle > span {
-  background-position-y: 33.333%;
-  animation: cat-idle-frames 2.8s steps(4) infinite;
+  animation: cat-frames 3.6s steps(15) infinite;
 }
 .cat-jump > span {
-  background-position-y: 66.666%;
-  animation: cat-jump-frames 0.85s steps(6) infinite;
+  animation: cat-frames 0.6s steps(15) infinite;
 }
 .cat-groom > span {
-  background-position-y: 100%;
-  animation: cat-frames 2.4s steps(7) 2;
+  animation: cat-frames 4.8s steps(15) 1 forwards;
 }
 .cat-sleep > span {
-  background-position: 100% 100%;
+  background-position: 100% 0;
   animation: cat-breathe 2.8s ease-in-out infinite;
 }
 @keyframes cat-frames {
@@ -1292,22 +1289,6 @@ button {
   }
   to {
     background-position-x: 100%;
-  }
-}
-@keyframes cat-jump-frames {
-  from {
-    background-position-x: 0;
-  }
-  to {
-    background-position-x: 85.714%;
-  }
-}
-@keyframes cat-idle-frames {
-  from {
-    background-position-x: 0;
-  }
-  to {
-    background-position-x: 57.143%;
   }
 }
 @keyframes cat-breathe {
@@ -1330,7 +1311,7 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .dashboard-cat > span {
     animation: none !important;
-    background-position: 0 33.333%;
+    background-position: 0 0;
   }
 }
 .widget textarea {
