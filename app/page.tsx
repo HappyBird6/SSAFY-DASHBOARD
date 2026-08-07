@@ -1373,11 +1373,12 @@ function DashboardChimp({
         ).find((element) => element.dataset.id === placement.widgetId);
         if (main && widget) {
           const rect = widget.getBoundingClientRect();
+          const firing = poseRef.current === "fire";
           const next = {
             x:
               placement.side === "right"
-                ? rect.right - main.left - 33.5
-                : rect.left - main.left - 94.5,
+                ? rect.right - main.left - (firing ? 90 : 33.5)
+                : rect.left - main.left - (firing ? 37.5 : 94.5),
             y: rect.top - main.top - 2,
           };
           setPosition((current) =>
@@ -1472,7 +1473,7 @@ function DashboardChimp({
     >
       <span
         style={{
-          backgroundImage: `url(${import.meta.env.BASE_URL}assets/${pose === "fire" ? "pixel-chimp-fire.webp" : "pixel-chimp-hang.webp"})`,
+          backgroundImage: `url(${import.meta.env.BASE_URL}assets/${pose === "fire" ? `pixel-chimp-fire-${placement.side}.webp` : "pixel-chimp-hang.webp"})`,
         }}
       />
     </div>

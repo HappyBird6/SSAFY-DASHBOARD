@@ -1334,11 +1334,8 @@ button {
 .dashboard-chimp.chimp-side-right > span {
   transform: scaleX(-1);
 }
-.dashboard-chimp.chimp-fire.chimp-side-right > span {
-  transform: scaleX(1);
-}
-.dashboard-chimp.chimp-fire.chimp-side-left > span {
-  transform: scaleX(-1);
+.dashboard-chimp.chimp-fire > span {
+  transform: none;
 }
 .chimp-hang > span {
   animation: chimp-hang-frames 2.4s steps(15) infinite;

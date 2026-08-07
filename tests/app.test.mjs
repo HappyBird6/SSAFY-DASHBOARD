@@ -87,7 +87,7 @@ test("adds a draggable chimp companion with cat interaction", async () => {
 
   assert.match(source, /chimpPlacements/);
   assert.match(source, /pixel-chimp-hang\.webp/);
-  assert.match(source, /pixel-chimp-fire\.webp/);
+  assert.match(source, /pixel-chimp-fire-\$\{placement\.side\}\.webp/);
   assert.match(source, /window\.addEventListener\("pointermove"/);
   assert.match(source, /window\.addEventListener\("pointerup"/);
   assert.match(source, /dashboard:cat-platform/);
@@ -100,6 +100,5 @@ test("adds a draggable chimp companion with cat interaction", async () => {
   assert.doesNotMatch(styles, /\.chimp-shot/);
   assert.match(styles, /animation: chimp-fire-frames 2\.1s/);
   assert.match(styles, /animation: chimp-hang-frames 2\.4s/);
-  assert.match(styles, /\.chimp-fire\.chimp-side-right > span/);
-  assert.match(styles, /\.chimp-fire\.chimp-side-left > span/);
+  assert.match(styles, /\.dashboard-chimp\.chimp-fire > span/);
 });
