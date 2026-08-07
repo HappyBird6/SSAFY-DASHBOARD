@@ -148,6 +148,8 @@ main[data-theme="blue"] .todo-footer {
 .misc-options {
   max-width: 760px;
   margin-top: 22px;
+  display: grid;
+  gap: 10px;
 }
 .misc-options > label {
   display: flex;
@@ -172,6 +174,21 @@ main[data-theme="blue"] .todo-footer {
   height: 18px;
   flex: 0 0 auto;
   accent-color: var(--cyan);
+}
+.misc-options .cat-speed-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+.misc-options .cat-speed-control input {
+  width: 180px;
+  height: auto;
+}
+.misc-options .cat-speed-control output {
+  min-width: 36px;
+  color: var(--cyan);
+  font-variant-numeric: tabular-nums;
 }
 .workspace-tabs button.active {
   background: var(--active-bg) !important;
@@ -1247,8 +1264,8 @@ button {
   position: absolute;
   left: 0;
   top: 0;
-  width: 76.8px;
-  height: 76.8px;
+  width: 96px;
+  height: 96px;
   z-index: 2147481500;
   pointer-events: none;
   transform-origin: 50% 100%;
@@ -1257,10 +1274,10 @@ button {
 }
 .dashboard-cat > span {
   display: block;
-  width: 76.8px;
-  height: 76.8px;
+  width: 96px;
+  height: 96px;
   background-repeat: no-repeat;
-  background-size: 1228.8px 76.8px;
+  background-size: 1536px 96px;
   background-position: 0 0;
   transform-origin: center bottom;
   image-rendering: pixelated;
@@ -1274,7 +1291,7 @@ button {
 .cat-jump > span,
 .cat-groom > span,
 .cat-wheel > span {
-  animation: cat-frames 1s steps(15) infinite;
+  animation: cat-frames var(--cat-cycle-duration, 2s) steps(15) infinite;
 }
 @keyframes cat-frames {
   from {

@@ -31,5 +31,10 @@ test("keeps the dashboard cat in exactly one sprite state", async () => {
   assert.match(source, /setPose\("jump"\)/);
   assert.doesNotMatch(source, /setPose\("sleep"\)/);
   assert.doesNotMatch(source, /setPose\(distance/);
-  assert.match(styles, /animation: cat-frames 1s steps\(15\) infinite/);
+  assert.match(
+    styles,
+    /animation: cat-frames var\(--cat-cycle-duration, 2s\) steps\(15\) infinite/,
+  );
+  assert.match(source, /catAnimationSpeed: 0\.5/);
+  assert.match(source, /type="range"/);
 });

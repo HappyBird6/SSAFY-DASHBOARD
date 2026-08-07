@@ -70,6 +70,7 @@ type Store = {
     sizePresets: SizePreset[];
     theme: Theme;
     catEnabled: boolean;
+    catAnimationSpeed: number;
   };
   workspaces: Workspace[];
   activeWorkspaceId: string;
@@ -108,6 +109,7 @@ const backupSchema = z.object({
       .optional(),
     theme: z.enum(["dark", "light", "blue"]).optional(),
     catEnabled: z.boolean().optional(),
+    catAnimationSpeed: z.number().min(0.25).max(1.25).optional(),
   }),
   workspaces: z
     .array(z.object({ id: z.string(), name: z.string() }))
@@ -235,6 +237,7 @@ const initial: Store = {
     sizePresets: DEFAULT_SIZE_PRESETS,
     theme: "dark",
     catEnabled: true,
+    catAnimationSpeed: 0.5,
   },
   workspaces: [{ id: MAIN_WORKSPACE, name: "MAIN" }],
   activeWorkspaceId: MAIN_WORKSPACE,
@@ -281,6 +284,10 @@ const normalizeStore = (value: unknown): Store => {
       sizePresets,
       theme: parsed.settings.theme || "dark",
       catEnabled: parsed.settings.catEnabled ?? true,
+      catAnimationSpeed: Math.min(
+        1.25,
+        Math.max(0.25, parsed.settings.catAnimationSpeed ?? 0.5),
+      ),
     },
     workspaces,
     activeWorkspaceId,
@@ -948,7 +955,7 @@ const CAT_SPRITES: Record<CatPose, string> = {
   wheel: "pixel-cat-wheel.webp",
 };
 
-const CAT_PLATFORM_OFFSET = 73;
+const CAT_PLATFORM_OFFSET = 93;
 const CAT_REST_POSES: CatPose[] = [
   "sit",
   "sit",
@@ -961,8 +968,10 @@ const CAT_REST_POSES: CatPose[] = [
 
 function DashboardCat({
   enabled,
+  speed,
 }: {
   enabled: boolean;
+  speed: number;
 }) {
   const catRef = useRef<HTMLDivElement>(null);
   const positionRef = useRef({ x: 230, y: 105 });
@@ -1164,6 +1173,7 @@ function DashboardCat({
       className={`dashboard-cat cat-${pose} ${facingLeft ? "facing-left" : ""}`}
       style={{
         transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
+        ["--cat-cycle-duration" as string]: `${1 / speed}s`,
       }}
       aria-label="대시보드를 돌아다니는 치즈냥이"
       title="치즈냥이"
@@ -2099,6 +2109,32 @@ export default function Home() {
                         }
                       />
                     </label>
+                    <label>
+                      <div>
+                        <strong>고양이 애니메이션 속도</strong>
+                        <p>모든 행동의 재생 속도를 동일한 비율로 조절합니다.</p>
+                      </div>
+                      <span className="cat-speed-control">
+                        <input
+                          type="range"
+                          min="0.25"
+                          max="1.25"
+                          step="0.25"
+                          value={store.settings.catAnimationSpeed}
+                          onChange={(event) =>
+                            setStore((state) => ({
+                              ...state,
+                              settings: {
+                                ...state.settings,
+                                catAnimationSpeed: Number(event.target.value),
+                              },
+                            }))
+                          }
+                          aria-label="고양이 애니메이션 속도"
+                        />
+                        <output>{store.settings.catAnimationSpeed}x</output>
+                      </span>
+                    </label>
                   </div>
                 </>
               ) : (
@@ -2555,6 +2591,7 @@ export default function Home() {
       )}
       <DashboardCat
         enabled={store.settings.catEnabled}
+        speed={store.settings.catAnimationSpeed}
       />
     </main>
   );
