@@ -941,13 +941,13 @@ type CatPose = "idle" | "walk" | "jump" | "groom" | "sleep";
 
 function DashboardCat({
   enabled,
-  resting,
 }: {
   enabled: boolean;
-  resting: boolean;
 }) {
   const catRef = useRef<HTMLDivElement>(null);
   const positionRef = useRef({ x: 230, y: 105 });
+  const platformRef = useRef("home");
+  const movementRef = useRef<Animation | null>(null);
   const [position, setPosition] = useState(positionRef.current);
   const [pose, setPose] = useState<CatPose>("idle");
   const [facingLeft, setFacingLeft] = useState(false);
@@ -956,6 +956,12 @@ function DashboardCat({
     if (!enabled) return;
     let timer = 0;
     let cancelled = false;
+    type CatTarget = { x: number; y: number; platformId: string };
+    const boundaryY = () => {
+      const main = document.querySelector("main")?.getBoundingClientRect();
+      const bar = document.querySelector(".canvas-label")?.getBoundingClientRect();
+      return main && bar ? bar.top - main.top - 62 : 160;
+    };
     const locate = (element: Element, home = false) => {
       const main = document.querySelector("main")?.getBoundingClientRect();
       const rect = element.getBoundingClientRect();
@@ -968,31 +974,64 @@ function DashboardCat({
             rect.left - main.left + (home ? rect.width + 18 : rect.width * 0.45),
           ),
         ),
-        y: Math.max(62, rect.top - main.top - 62),
+        y: home
+          ? Math.max(62, rect.top - main.top - 62)
+          : Math.max(boundaryY(), rect.top - main.top - 62),
       };
     };
-    const home = () => {
+    const home = (): CatTarget => {
       const clock = document.querySelector(".datetime");
-      return clock ? locate(clock, true) : { x: 230, y: 105 };
+      return {
+        ...(clock ? locate(clock, true) : { x: 230, y: 105 }),
+        platformId: "home",
+      };
     };
-    const settle = (next: { x: number; y: number }, nextPose: CatPose) => {
+    const workspaceBar = (): CatTarget => {
+      const bar = document.querySelector(".canvas-label");
+      const point = bar ? locate(bar) : { x: 80, y: boundaryY() };
+      return { ...point, x: Math.max(80, point.x + 70), platformId: "workspace-bar" };
+    };
+    const settle = (next: CatTarget, nextPose: CatPose) => {
       positionRef.current = next;
+      platformRef.current = next.platformId;
       setPosition(next);
       setPose(nextPose);
     };
-    const travel = async (target: { x: number; y: number }) => {
+    const availableWidgets = (excludedId?: string): CatTarget[] =>
+      Array.from(document.querySelectorAll<HTMLElement>(".widget .widget-top"))
+        .map((element) => {
+          const widget = element.closest<HTMLElement>(".widget");
+          const id = widget?.dataset.id || "";
+          const rect = element.getBoundingClientRect();
+          return { element, id, rect };
+        })
+        .filter(
+          ({ id, rect }) =>
+            id &&
+            id !== excludedId &&
+            rect.width > 150 &&
+            rect.bottom > 76 &&
+            rect.top < innerHeight - 60,
+        )
+        .map(({ element, id }) => ({ ...locate(element), platformId: id }));
+    const travel = async (target: CatTarget) => {
       const element = catRef.current;
       if (!element || cancelled) return;
+      movementRef.current?.cancel();
       const start = positionRef.current;
       const distance = Math.hypot(target.x - start.x, target.y - start.y);
       setFacingLeft(target.x < start.x);
       setPose(distance > 220 ? "jump" : "walk");
       const lift = Math.min(82, Math.max(30, distance * 0.18));
+      const safeArcY = Math.max(
+        boundaryY(),
+        Math.min(start.y, target.y) - lift,
+      );
       const animation = element.animate(
         [
           { transform: `translate3d(${start.x}px, ${start.y}px, 0)` },
           {
-            transform: `translate3d(${(start.x + target.x) / 2}px, ${Math.min(start.y, target.y) - lift}px, 0)`,
+            transform: `translate3d(${(start.x + target.x) / 2}px, ${safeArcY}px, 0)`,
             offset: 0.52,
           },
           { transform: `translate3d(${target.x}px, ${target.y}px, 0)` },
@@ -1002,41 +1041,58 @@ function DashboardCat({
           easing: "cubic-bezier(.36,.05,.2,1)",
         },
       );
+      movementRef.current = animation;
       try {
         await animation.finished;
       } catch {
         return;
       }
-      if (!cancelled) settle(target, Math.random() < 0.18 ? "groom" : "idle");
+      if (!cancelled) settle(target, Math.random() < 0.08 ? "groom" : "idle");
     };
     const chooseNext = async () => {
       if (cancelled || document.hidden) return;
-      if (resting) {
-        await travel(home());
-        if (!cancelled) setPose("sleep");
-        return;
-      }
-      const platforms = Array.from(
-        document.querySelectorAll(".widget .widget-top"),
-      ).filter((element) => {
-        const rect = element.getBoundingClientRect();
-        return rect.width > 150 && rect.bottom > 76 && rect.top < innerHeight - 60;
-      });
-      const useHome = platforms.length === 0 || Math.random() < 0.28;
-      const target = useHome
-        ? home()
-        : locate(platforms[Math.floor(Math.random() * platforms.length)]);
+      const platforms = availableWidgets(platformRef.current);
+      const target =
+        platforms.length === 0 || Math.random() < 0.2
+          ? workspaceBar()
+          : platforms[Math.floor(Math.random() * platforms.length)];
       await travel(target);
-      if (!cancelled && Math.random() < 0.12) setPose("sleep");
+      if (!cancelled && Math.random() < 0.06) setPose("sleep");
     };
     const initial = home();
-    settle(initial, resting ? "sleep" : "idle");
+    settle(initial, "idle");
     const schedule = () => {
       window.clearTimeout(timer);
       timer = window.setTimeout(async () => {
         await chooseNext();
         if (!cancelled) schedule();
-      }, resting ? 12000 : 6500 + Math.random() * 7000);
+      }, 22000 + Math.random() * 18000);
+    };
+    const escapeMovingWidget = (event: Event) => {
+      const widgetIds = (event as CustomEvent<{ ids: string[] }>).detail.ids;
+      if (!widgetIds.includes(platformRef.current)) return;
+      const alternatives = availableWidgets(platformRef.current).filter(
+        (target) => !widgetIds.includes(target.platformId),
+      );
+      void travel(
+        alternatives.length
+          ? alternatives[Math.floor(Math.random() * alternatives.length)]
+          : workspaceBar(),
+      );
+      schedule();
+    };
+    const moveToWorkspaceBar = () => {
+      void travel(workspaceBar());
+      schedule();
+    };
+    const changeWorkspace = async () => {
+      window.clearTimeout(timer);
+      await travel(workspaceBar());
+      if (cancelled) return;
+      timer = window.setTimeout(async () => {
+        await chooseNext();
+        if (!cancelled) schedule();
+      }, 7000);
     };
     const visibility = () => {
       if (document.hidden) {
@@ -1047,14 +1103,21 @@ function DashboardCat({
       }
     };
     document.addEventListener("visibilitychange", visibility);
+    window.addEventListener("dashboard:widget-drag-start", escapeMovingWidget);
+    window.addEventListener("dashboard:workspace-change", changeWorkspace);
+    window.addEventListener("dashboard:settings-open", moveToWorkspaceBar);
     schedule();
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
+      movementRef.current?.cancel();
       catRef.current?.getAnimations().forEach((animation) => animation.cancel());
       document.removeEventListener("visibilitychange", visibility);
+      window.removeEventListener("dashboard:widget-drag-start", escapeMovingWidget);
+      window.removeEventListener("dashboard:workspace-change", changeWorkspace);
+      window.removeEventListener("dashboard:settings-open", moveToWorkspaceBar);
     };
-  }, [enabled, resting]);
+  }, [enabled]);
 
   if (!enabled) return null;
   return (
@@ -1100,7 +1163,7 @@ export default function Home() {
   const [clock, setClock] = useState(new Date());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSection, setSettingsSection] = useState<
-    "workspaces" | "widgets" | "sizes" | "theme" | "data"
+    "workspaces" | "widgets" | "sizes" | "theme" | "other" | "data"
   >("workspaces");
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -1168,6 +1231,11 @@ export default function Home() {
             dragIdsRef.current = selectedRef.current.includes(id)
               ? selectedRef.current
               : [id];
+            window.dispatchEvent(
+              new CustomEvent("dashboard:widget-drag-start", {
+                detail: { ids: dragIdsRef.current },
+              }),
+            );
             if (!selectedRef.current.includes(id)) {
               selectedRef.current = [id];
               setSelected([id]);
@@ -1535,22 +1603,6 @@ export default function Home() {
           </b>
           <small>{clock.getFullYear()}</small>
         </div>
-        <label className="cat-toggle">
-          <input
-            type="checkbox"
-            checked={store.settings.catEnabled}
-            onChange={(event) =>
-              setStore((state) => ({
-                ...state,
-                settings: {
-                  ...state.settings,
-                  catEnabled: event.target.checked,
-                },
-              }))
-            }
-          />
-          <span>CAT</span>
-        </label>
         <div className="stats-spacer" />
         <div className="widget-create">
           <button className="widget-create-trigger">WIDGET＋</button>
@@ -1587,6 +1639,7 @@ export default function Home() {
               className={settingsOpen ? "active settings-tab" : "settings-tab"}
               aria-label="설정"
               onClick={() => {
+                window.dispatchEvent(new Event("dashboard:settings-open"));
                 setSettingsOpen(true);
                 setSelected([]);
               }}
@@ -1602,6 +1655,7 @@ export default function Home() {
                     : ""
                 }
                 onClick={() => {
+                  window.dispatchEvent(new Event("dashboard:workspace-change"));
                   setSettingsOpen(false);
                   setSelected([]);
                   setStore((s) => ({ ...s, activeWorkspaceId: ws.id }));
@@ -1639,6 +1693,12 @@ export default function Home() {
                 onClick={() => setSettingsSection("theme")}
               >
                 페이지 테마
+              </button>
+              <button
+                className={settingsSection === "other" ? "active" : ""}
+                onClick={() => setSettingsSection("other")}
+              >
+                기타
               </button>
               <button
                 className={settingsSection === "data" ? "active" : ""}
@@ -1970,6 +2030,37 @@ export default function Home() {
                         </strong>
                       </button>
                     ))}
+                  </div>
+                </>
+              ) : settingsSection === "other" ? (
+                <>
+                  <div className="settings-heading">
+                    <div>
+                      <small>COMPANION</small>
+                      <h2>기타 설정</h2>
+                      <p>대시보드의 부가 기능을 설정합니다.</p>
+                    </div>
+                  </div>
+                  <div className="misc-options">
+                    <label>
+                      <div>
+                        <strong>치즈냥이</strong>
+                        <p>워크스페이스와 위젯 위를 돌아다니는 고양이입니다.</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={store.settings.catEnabled}
+                        onChange={(event) =>
+                          setStore((state) => ({
+                            ...state,
+                            settings: {
+                              ...state.settings,
+                              catEnabled: event.target.checked,
+                            },
+                          }))
+                        }
+                      />
+                    </label>
                   </div>
                 </>
               ) : (
@@ -2426,7 +2517,6 @@ export default function Home() {
       )}
       <DashboardCat
         enabled={store.settings.catEnabled}
-        resting={settingsOpen || Boolean(modal)}
       />
     </main>
   );

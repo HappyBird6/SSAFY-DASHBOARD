@@ -145,6 +145,34 @@ main[data-theme="blue"] .todo-footer {
   color: var(--cyan);
   padding: 10px 14px;
 }
+.misc-options {
+  max-width: 760px;
+  margin-top: 22px;
+}
+.misc-options > label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
+  cursor: pointer;
+}
+.misc-options strong {
+  font-size: 13px;
+}
+.misc-options p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.misc-options input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  accent-color: var(--cyan);
+}
 .workspace-tabs button.active {
   background: var(--active-bg) !important;
 }
@@ -448,7 +476,7 @@ main[data-theme="blue"] .todo-footer {
   box-shadow: inset 3px 0 var(--cyan);
 }
 .stats {
-  grid-template-columns: 190px auto 1fr auto !important;
+  grid-template-columns: 190px 1fr auto !important;
 }
 .datetime {
   padding: 18px 22px;
@@ -472,22 +500,6 @@ main[data-theme="blue"] .todo-footer {
 }
 .stats-spacer {
   min-width: 0;
-}
-.cat-toggle {
-  align-self: center;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  margin-left: 112px;
-  color: var(--muted);
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  cursor: pointer;
-}
-.cat-toggle input {
-  width: 15px;
-  height: 15px;
-  accent-color: var(--cyan);
 }
 .stats > .widget-create {
   display: flex;
@@ -1260,7 +1272,7 @@ button {
 }
 .cat-idle > span {
   background-position-y: 33.333%;
-  animation: cat-frames 1.65s steps(7) infinite;
+  animation: cat-idle-frames 2.8s steps(4) infinite;
 }
 .cat-jump > span {
   background-position-y: 66.666%;
@@ -1288,6 +1300,14 @@ button {
   }
   to {
     background-position-x: 85.714%;
+  }
+}
+@keyframes cat-idle-frames {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: 57.143%;
   }
 }
 @keyframes cat-breathe {

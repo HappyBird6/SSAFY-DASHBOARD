@@ -10,7 +10,6 @@ source_path = Path(sys.argv[1])
 output_path = Path(sys.argv[2])
 COLS, ROWS = 8, 4
 CELL_W, CELL_H = 256, 192
-TARGET_HEIGHTS = (132, 158, 122, 132)
 BOTTOM = 185
 
 source = Image.open(source_path).convert("RGBA")
@@ -53,14 +52,16 @@ for end in [*breaks, len(components)]:
 if len(rows) != ROWS or any(len(row) not in (7, 8) for row in rows):
     raise RuntimeError(f"Unexpected row sizes: {[len(row) for row in rows]}")
 atlas = Image.new("RGBA", (CELL_W * COLS, CELL_H * ROWS))
+largest_width = max(item["box"][2] - item["box"][0] for item in components)
+largest_height = max(item["box"][3] - item["box"][1] for item in components)
+global_scale = min((CELL_W - 14) / largest_width, (CELL_H - 14) / largest_height)
 
 for row_index, row in enumerate(rows):
     row.sort(key=lambda item: item["cx"])
     for col_index, item in enumerate(row):
         subject = source.crop(item["box"])
-        scale = TARGET_HEIGHTS[row_index] / subject.height
-        width = min(CELL_W - 12, round(subject.width * scale))
-        height = round(subject.height * (width / subject.width))
+        width = round(subject.width * global_scale)
+        height = round(subject.height * global_scale)
         subject = subject.resize((width, height), Image.Resampling.LANCZOS)
         left = (CELL_W - width) // 2
         top = BOTTOM - height
