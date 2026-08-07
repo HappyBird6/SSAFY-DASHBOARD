@@ -212,7 +212,7 @@ const DEFAULT_WIDGET_COLORS: Record<Kind, string> = {
   launcher: "#60a5fa",
 };
 const DEFAULT_SIZE_PRESETS: SizePreset[] = [
-  { id: "size-default", name: "기본", width: 300, height: 200 },
+  { id: "size-default", name: "湲곕낯", width: 300, height: 200 },
 ];
 const make = (
   type: Kind,
@@ -244,7 +244,7 @@ const initial: Store = {
   exportedAt: now(),
   settings: {
     grid: 20,
-    message: "꾸준함이 결국 실력을 만든다.",
+    message: "袁몄??⑥씠 寃곌뎅 ?ㅻ젰??留뚮뱺??",
     widgetColors: DEFAULT_WIDGET_COLORS,
     sizePresets: DEFAULT_SIZE_PRESETS,
     theme: "dark",
@@ -257,13 +257,13 @@ const initial: Store = {
   activeWorkspaceId: MAIN_WORKSPACE,
   widgets: [
     make("bookmark", "SSAFY GITLAB", 40, 40, { url: "https://lab.ssafy.com" }),
-    make("todo", "오늘의 학습", 360, 40, {
+    make("todo", "?ㅻ뒛???숈뒿", 360, 40, {
       done: false,
       due: new Date().toISOString().slice(0, 10),
       priority: "HIGH",
     }),
-    make("note", "알고리즘 메모", 40, 270, {
-      body: "BFS: 큐에 넣을 때 방문 처리\n시간복잡도 O(V + E)",
+    make("note", "?뚭퀬由ъ쬁 硫붾え", 40, 270, {
+      body: "BFS: ?먯뿉 ?ｌ쓣 ??諛⑸Ц 泥섎━\n?쒓컙蹂듭옟??O(V + E)",
     }),
     make("bookmark", "SW EXPERT ACADEMY", 390, 270, {
       url: "https://swexpertacademy.com",
@@ -293,7 +293,7 @@ const normalizeStore = (value: unknown): Store => {
     exportedAt: parsed.exportedAt,
     settings: {
       grid: parsed.settings.grid,
-      message: parsed.settings.message || "꾸준함이 결국 실력을 만든다.",
+      message: parsed.settings.message || "袁몄??⑥씠 寃곌뎅 ?ㅻ젰??留뚮뱺??",
       widgetColors,
       sizePresets,
       theme: parsed.settings.theme || "dark",
@@ -332,43 +332,43 @@ function Icon({ type }: { type: Kind }) {
   return (
     <span className={`kind kind-${type}`}>
       {type === "bookmark"
-        ? "↗"
+        ? "??
         : type === "note"
-          ? "≡"
+          ? "??
           : type === "todo"
-            ? "✓"
+            ? "??
             : type === "todolist"
-              ? "≣"
+              ? "??
             : type === "weather"
-              ? "☁"
+              ? "??
               : type === "calendar"
-                ? "□"
+                ? "??
                 : type === "timer"
-                  ? "◷"
+                  ? "??
                   : type === "countdown"
                     ? "D"
                     : type === "fish"
-                      ? "🐠"
-                    : "⚡"}
+                      ? "?맆"
+                    : "??}
     </span>
   );
 }
 
 const KOREAN_CITIES = [
-  { id: "seoul", name: "서울", latitude: 37.5665, longitude: 126.978 },
-  { id: "busan", name: "부산", latitude: 35.1796, longitude: 129.0756 },
-  { id: "daegu", name: "대구", latitude: 35.8714, longitude: 128.6014 },
-  { id: "incheon", name: "인천", latitude: 37.4563, longitude: 126.7052 },
-  { id: "gwangju", name: "광주", latitude: 35.1595, longitude: 126.8526 },
-  { id: "daejeon", name: "대전", latitude: 36.3504, longitude: 127.3845 },
-  { id: "ulsan", name: "울산", latitude: 35.5384, longitude: 129.3114 },
-  { id: "sejong", name: "세종", latitude: 36.48, longitude: 127.289 },
-  { id: "suwon", name: "수원", latitude: 37.2636, longitude: 127.0286 },
-  { id: "chuncheon", name: "춘천", latitude: 37.8813, longitude: 127.7298 },
-  { id: "cheongju", name: "청주", latitude: 36.6424, longitude: 127.489 },
-  { id: "jeonju", name: "전주", latitude: 35.8242, longitude: 127.148 },
-  { id: "changwon", name: "창원", latitude: 35.2285, longitude: 128.6811 },
-  { id: "jeju", name: "제주", latitude: 33.4996, longitude: 126.5312 },
+  { id: "seoul", name: "?쒖슱", latitude: 37.5665, longitude: 126.978 },
+  { id: "busan", name: "遺??, latitude: 35.1796, longitude: 129.0756 },
+  { id: "daegu", name: "?援?, latitude: 35.8714, longitude: 128.6014 },
+  { id: "incheon", name: "?몄쿇", latitude: 37.4563, longitude: 126.7052 },
+  { id: "gwangju", name: "愿묒＜", latitude: 35.1595, longitude: 126.8526 },
+  { id: "daejeon", name: "???, latitude: 36.3504, longitude: 127.3845 },
+  { id: "ulsan", name: "?몄궛", latitude: 35.5384, longitude: 129.3114 },
+  { id: "sejong", name: "?몄쥌", latitude: 36.48, longitude: 127.289 },
+  { id: "suwon", name: "?섏썝", latitude: 37.2636, longitude: 127.0286 },
+  { id: "chuncheon", name: "異섏쿇", latitude: 37.8813, longitude: 127.7298 },
+  { id: "cheongju", name: "泥?＜", latitude: 36.6424, longitude: 127.489 },
+  { id: "jeonju", name: "?꾩＜", latitude: 35.8242, longitude: 127.148 },
+  { id: "changwon", name: "李쎌썝", latitude: 35.2285, longitude: 128.6811 },
+  { id: "jeju", name: "?쒖＜", latitude: 33.4996, longitude: 126.5312 },
 ] as const;
 
 type WeatherResult = {
@@ -386,14 +386,14 @@ type WeatherResult = {
 };
 
 const weatherLabel = (code: number) => {
-  if (code === 0) return ["☀️", "맑음"];
-  if (code <= 3) return ["⛅", "구름"];
-  if (code <= 48) return ["🌫️", "안개"];
-  if (code <= 67) return ["🌧️", "비"];
-  if (code <= 77) return ["🌨️", "눈"];
-  if (code <= 82) return ["🌦️", "소나기"];
-  if (code <= 86) return ["🌨️", "눈 소나기"];
-  return ["⛈️", "뇌우"];
+  if (code === 0) return ["?截?, "留묒쓬"];
+  if (code <= 3) return ["??, "援щ쫫"];
+  if (code <= 48) return ["?뙧截?, "?덇컻"];
+  if (code <= 67) return ["?뙢截?, "鍮?];
+  if (code <= 77) return ["?뙣截?, "??];
+  if (code <= 82) return ["?뙡截?, "?뚮굹湲?];
+  if (code <= 86) return ["?뙣截?, "???뚮굹湲?];
+  return ["?덌툘", "?뚯슦"];
 };
 
 type GeoResult = {
@@ -443,7 +443,7 @@ function LocationPicker({ widget }: { widget?: Widget }) {
     setSearchMessage("");
     try {
       const params = new URLSearchParams({
-        q: `${query.trim()}, 대한민국`,
+        q: `${query.trim()}, ??쒕?援?,
         format: "jsonv2",
         addressdetails: "1",
         "accept-language": "ko",
@@ -472,10 +472,10 @@ function LocationPicker({ widget }: { widget?: Widget }) {
       }));
       setResults(normalized);
       if (!normalized.length)
-        setSearchMessage("검색 결과가 없습니다. 동·구 이름을 바꿔보세요.");
+        setSearchMessage("寃??寃곌낵媛 ?놁뒿?덈떎. ?쇑룰뎄 ?대쫫??諛붽퓭蹂댁꽭??");
     } catch {
       setResults([]);
-      setSearchMessage("지역 검색에 실패했습니다. 잠시 후 다시 시도하세요.");
+      setSearchMessage("吏??寃?됱뿉 ?ㅽ뙣?덉뒿?덈떎. ?좎떆 ???ㅼ떆 ?쒕룄?섏꽭??");
     } finally {
       setSearching(false);
     }
@@ -484,15 +484,14 @@ function LocationPicker({ widget }: { widget?: Widget }) {
   return (
     <div className="location-picker">
       <label>
-        지역 검색
-        <span className="location-search">
+        吏??寃??        <span className="location-search">
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="예: 역삼동, 정자동, 해운대구"
+            placeholder="?? ??궪?? ?뺤옄?? ?댁슫?援?
           />
           <button type="button" onClick={search}>
-            {searching ? "검색 중" : "검색"}
+            {searching ? "寃??以? : "寃??}
           </button>
         </span>
       </label>
@@ -505,7 +504,7 @@ function LocationPicker({ widget }: { widget?: Widget }) {
               onClick={() => {
                 const name = [result.name, result.admin2, result.admin1]
                   .filter(Boolean)
-                  .join(" · ");
+                  .join(" 쨌 ");
                 setSelected({
                   name,
                   latitude: result.latitude,
@@ -517,7 +516,7 @@ function LocationPicker({ widget }: { widget?: Widget }) {
             >
               <strong>{result.name}</strong>
               <small>
-                {[result.admin2, result.admin1].filter(Boolean).join(" · ")}
+                {[result.admin2, result.admin1].filter(Boolean).join(" 쨌 ")}
               </small>
             </button>
           ))}
@@ -526,7 +525,7 @@ function LocationPicker({ widget }: { widget?: Widget }) {
       {searchMessage && (
         <small className="search-message">{searchMessage}</small>
       )}
-      <small className="selected-location">선택 지역 · {selected.name}</small>
+      <small className="selected-location">?좏깮 吏??쨌 {selected.name}</small>
       <input type="hidden" name="locationName" value={selected.name} />
       <input type="hidden" name="latitude" value={selected.latitude} />
       <input type="hidden" name="longitude" value={selected.longitude} />
@@ -572,7 +571,7 @@ function WeatherWidget({ widget }: { widget: Widget }) {
         if ((reason as Error).name === "AbortError") return;
         const cached = localStorage.getItem(cacheKey);
         if (cached) setWeather(JSON.parse(cached));
-        else setError("날씨 예보 데이터를 불러올 수 없습니다.");
+        else setError("?좎뵪 ?덈낫 ?곗씠?곕? 遺덈윭?????놁뒿?덈떎.");
       }
     };
     load();
@@ -580,7 +579,7 @@ function WeatherWidget({ widget }: { widget: Widget }) {
   }, [location.latitude, location.longitude]);
 
   if (!weather)
-    return <p className="api-state">{error || "날씨 예보 불러오는 중…"}</p>;
+    return <p className="api-state">{error || "?좎뵪 ?덈낫 遺덈윭?ㅻ뒗 以묅?}</p>;
   const [icon, label] = weatherLabel(weather.current.weather_code);
   return (
     <div className="weather-content">
@@ -590,26 +589,26 @@ function WeatherWidget({ widget }: { widget: Widget }) {
         </span>
         <div>
           <strong>{location.name}</strong>
-          <small>{label} · BEST MATCH</small>
+          <small>{label} 쨌 BEST MATCH</small>
         </div>
-        <b>{Math.round(weather.current.temperature_2m)}°</b>
+        <b>{Math.round(weather.current.temperature_2m)}째</b>
       </div>
       <div className="weather-grid">
         <span>
-          체감 <b>{Math.round(weather.current.apparent_temperature)}°</b>
+          泥닿컧 <b>{Math.round(weather.current.apparent_temperature)}째</b>
         </span>
         <span>
-          최고 <b>{Math.round(weather.daily.temperature_2m_max[0])}°</b>
+          理쒓퀬 <b>{Math.round(weather.daily.temperature_2m_max[0])}째</b>
         </span>
         <span>
-          최저 <b>{Math.round(weather.daily.temperature_2m_min[0])}°</b>
+          理쒖? <b>{Math.round(weather.daily.temperature_2m_min[0])}째</b>
         </span>
         <span>
-          강수 <b>{weather.daily.precipitation_probability_max[0]}%</b>
+          媛뺤닔 <b>{weather.daily.precipitation_probability_max[0]}%</b>
         </span>
       </div>
       <small className="api-updated">
-        업데이트 {weather.current.time.replace("T", " ")}
+        ?낅뜲?댄듃 {weather.current.time.replace("T", " ")}
       </small>
     </div>
   );
@@ -653,19 +652,17 @@ function CalendarWidget() {
         <button
           onClick={() => setMonth(new Date(year, month.getMonth() - 1, 1))}
         >
-          ‹
-        </button>
+          ??        </button>
         <strong>
           {year}. {String(month.getMonth() + 1).padStart(2, "0")}
         </strong>
         <button
           onClick={() => setMonth(new Date(year, month.getMonth() + 1, 1))}
         >
-          ›
-        </button>
+          ??        </button>
       </div>
       <div className="calendar-grid calendar-weekdays">
-        {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
+        {["??, "??, "??, "??, "紐?, "湲?, "??].map((day) => (
           <span key={day}>{day}</span>
         ))}
       </div>
@@ -819,19 +816,18 @@ function TodoListWidget({
   });
   return (
     <div className="todolist-content">
-      <div className="todolist-sort" aria-label="TODO 정렬 방식">
+      <div className="todolist-sort" aria-label="TODO ?뺣젹 諛⑹떇">
         <button
           className={sort === "priority" ? "active" : ""}
           onClick={() => onSort("priority")}
         >
-          중요도순
+          以묒슂?꾩닚
         </button>
         <button
           className={sort === "date" ? "active" : ""}
           onClick={() => onSort("date")}
         >
-          날짜순
-        </button>
+          ?좎쭨??        </button>
       </div>
       <div className="todolist-items">
         {sorted.length ? (
@@ -843,14 +839,14 @@ function TodoListWidget({
                 onChange={(event) => onToggle(todo, event.target.checked)}
               />
               <strong>{todo.title}</strong>
-              <time>{todo.data.due || "기한 없음"}</time>
+              <time>{todo.data.due || "湲고븳 ?놁쓬"}</time>
               <span className={`priority ${todo.data.priority?.toLowerCase()}`}>
                 {todo.data.priority || "MEDIUM"}
               </span>
             </label>
           ))
         ) : (
-          <p>등록된 TODO가 없습니다.</p>
+          <p>?깅줉??TODO媛 ?놁뒿?덈떎.</p>
         )}
       </div>
     </div>
@@ -864,17 +860,15 @@ function CountdownSizePicker({ initial }: { initial: number }) {
   return (
     <div className="countdown-size-picker">
       <input type="hidden" name="countdownFontSize" value={fontSize} />
-      <span>글자 크기</span>
+      <span>湲???ш린</span>
       <div className="countdown-size-actions">
-        <button type="button" onClick={() => resize(-4)} aria-label="글자 작게">
-          A−
-        </button>
-        <button type="button" onClick={() => resize(4)} aria-label="글자 크게">
-          A＋
-        </button>
+        <button type="button" onClick={() => resize(-4)} aria-label="湲???묎쾶">
+          A??        </button>
+        <button type="button" onClick={() => resize(4)} aria-label="湲???ш쾶">
+          A竊?        </button>
         <small>{fontSize}px</small>
       </div>
-      <div className="countdown-preview" aria-label="카운트다운 미리보기">
+      <div className="countdown-preview" aria-label="移댁슫?몃떎??誘몃━蹂닿린">
         <strong style={{ fontSize }}>D-30</strong>
       </div>
     </div>
@@ -886,7 +880,7 @@ function BookmarkLinksEditor({ widget }: { widget?: Widget }) {
     ? widget.data.links
     : widget?.data.url
       ? [{ id: crypto.randomUUID(), label: widget.title || "LINK", url: widget.data.url }]
-      : [{ id: crypto.randomUUID(), label: "새 링크", url: "https://" }];
+      : [{ id: crypto.randomUUID(), label: "??留곹겕", url: "https://" }];
   const [links, setLinks] = useState(existing);
   const moveLink = (index: number, offset: number) =>
     setLinks((items) => {
@@ -898,19 +892,19 @@ function BookmarkLinksEditor({ widget }: { widget?: Widget }) {
     });
   return (
     <fieldset className="bookmark-links-editor">
-      <legend>링크 목록</legend>
+      <legend>留곹겕 紐⑸줉</legend>
       {links.map((link, index) => (
         <div className="bookmark-link-row" key={link.id}>
           <input
             name="linkLabel"
-            aria-label={`${index + 1}번 링크 이름`}
+            aria-label={`${index + 1}踰?留곹겕 ?대쫫`}
             defaultValue={link.label}
-            placeholder="링크 이름"
+            placeholder="留곹겕 ?대쫫"
             required
           />
           <input
             name="linkUrl"
-            aria-label={`${index + 1}번 URL`}
+            aria-label={`${index + 1}踰?URL`}
             type="url"
             defaultValue={link.url}
             placeholder="https://"
@@ -919,28 +913,26 @@ function BookmarkLinksEditor({ widget }: { widget?: Widget }) {
           <button
             className="bookmark-order"
             type="button"
-            aria-label={`${index + 1}번 링크 위로 이동`}
+            aria-label={`${index + 1}踰?留곹겕 ?꾨줈 ?대룞`}
             disabled={index === 0}
             onClick={() => moveLink(index, -1)}
           >
-            ↑
-          </button>
+            ??          </button>
           <button
             className="bookmark-order"
             type="button"
-            aria-label={`${index + 1}번 링크 아래로 이동`}
+            aria-label={`${index + 1}踰?留곹겕 ?꾨옒濡??대룞`}
             disabled={index === links.length - 1}
             onClick={() => moveLink(index, 1)}
           >
-            ↓
-          </button>
+            ??          </button>
           <button
             type="button"
-            aria-label={`${index + 1}번 링크 삭제`}
+            aria-label={`${index + 1}踰?留곹겕 ??젣`}
             disabled={links.length === 1}
             onClick={() => setLinks((items) => items.filter((item) => item.id !== link.id))}
           >
-            ×
+            횞
           </button>
         </div>
       ))}
@@ -954,7 +946,7 @@ function BookmarkLinksEditor({ widget }: { widget?: Widget }) {
           ])
         }
       >
-        링크 추가
+        留곹겕 異붽?
       </button>
     </fieldset>
   );
@@ -1290,8 +1282,8 @@ function DashboardCat({
         event.preventDefault();
         window.dispatchEvent(new Event("dashboard:cat-click"));
       }}
-      aria-label="대시보드를 돌아다니는 치즈냥이"
-      title="치즈냥이"
+      aria-label="??쒕낫?쒕? ?뚯븘?ㅻ땲??移섏쫰?μ씠"
+      title="移섏쫰?μ씠"
     >
       <span
         style={{
@@ -1377,8 +1369,8 @@ function DashboardChimp({
           const next = {
             x:
               placement.side === "right"
-                ? rect.right - main.left - (firing ? 90 : 33.5)
-                : rect.left - main.left - (firing ? 37.5 : 94.5),
+                ? rect.right - main.left - (firing ? 68 : 33.5)
+                : rect.left - main.left - (firing ? 60 : 94.5),
             y: rect.top - main.top - 2,
           };
           setPosition((current) =>
@@ -1468,8 +1460,8 @@ function DashboardChimp({
         draggingRef.current = true;
         setDragging(true);
       }}
-      aria-label="위젯 모서리에 매달린 침팬지"
-      title="드래그해서 다른 위젯으로 옮기기"
+      aria-label="?꾩젽 紐⑥꽌由ъ뿉 留ㅻ떖由?移⑦뙩吏"
+      title="?쒕옒洹명빐???ㅻⅨ ?꾩젽?쇰줈 ??린湲?
     >
       <span
         style={{
@@ -1696,12 +1688,12 @@ export default function Home() {
         (type === "todolist"
           ? "TODO LIST"
           : type === "fish"
-            ? "열대어"
+            ? "?대???
           : type === "calendar"
-          ? "달력"
+          ? "?щ젰"
           : type === "timer" || type === "countdown"
             ? ""
-            : "새 위젯"),
+            : "???꾩젽"),
     );
     const borderColor = String(form.get("borderColor") || "#303b47");
     const presetId = String(form.get("sizePreset") || "");
@@ -1731,7 +1723,7 @@ export default function Home() {
               }
             : type === "weather"
               ? {
-                  locationName: String(form.get("locationName") || "서울"),
+                  locationName: String(form.get("locationName") || "?쒖슱"),
                   latitude: Number(form.get("latitude") || 37.5665),
                   longitude: Number(form.get("longitude") || 126.978),
                 }
@@ -1854,7 +1846,7 @@ export default function Home() {
     setModal(null);
   };
   const remove = (id: string) => {
-    if (!confirm("이 위젯을 삭제할까요?")) return;
+    if (!confirm("???꾩젽????젣?좉퉴??")) return;
     setStore((s) => ({ ...s, widgets: s.widgets.filter((w) => w.id !== id) }));
   };
   const exportJson = () => {
@@ -1872,11 +1864,11 @@ export default function Home() {
     if (!file) return;
     try {
       const parsed = normalizeStore(JSON.parse(await file.text()));
-      if (!confirm("현재 데이터를 백업 파일 내용으로 교체할까요?")) return;
+      if (!confirm("?꾩옱 ?곗씠?곕? 諛깆뾽 ?뚯씪 ?댁슜?쇰줈 援먯껜?좉퉴??")) return;
       setStore(parsed);
-      setToast("워크스페이스를 복원했습니다.");
+      setToast("?뚰겕?ㅽ럹?댁뒪瑜?蹂듭썝?덉뒿?덈떎.");
     } catch {
-      setToast("유효하지 않은 백업 파일입니다. 기존 데이터는 유지됩니다.");
+      setToast("?좏슚?섏? ?딆? 諛깆뾽 ?뚯씪?낅땲?? 湲곗〈 ?곗씠?곕뒗 ?좎??⑸땲??");
     }
   };
   const beginSelection = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -1929,7 +1921,7 @@ export default function Home() {
           </div>
         </div>
       </header>
-      <section className="stats" aria-label="요약">
+      <section className="stats" aria-label="?붿빟">
         <div className="datetime">
           <span>
             {new Intl.DateTimeFormat("ko-KR", {
@@ -1950,7 +1942,7 @@ export default function Home() {
         </div>
         <div className="stats-spacer" />
         <div className="widget-create">
-          <button className="widget-create-trigger">WIDGET＋</button>
+          <button className="widget-create-trigger">WIDGET竊?/button>
           <div className="widget-menu">
             {(
               [
@@ -1982,15 +1974,14 @@ export default function Home() {
           <div className="workspace-tabs">
             <button
               className={settingsOpen ? "active settings-tab" : "settings-tab"}
-              aria-label="설정"
+              aria-label="?ㅼ젙"
               onClick={() => {
                 window.dispatchEvent(new Event("dashboard:settings-open"));
                 setSettingsOpen(true);
                 setSelected([]);
               }}
             >
-              ⚙
-            </button>
+              ??            </button>
             {store.workspaces.map((ws) => (
               <button
                 key={ws.id}
@@ -2019,38 +2010,36 @@ export default function Home() {
                 className={settingsSection === "workspaces" ? "active" : ""}
                 onClick={() => setSettingsSection("workspaces")}
               >
-                워크스페이스
+                ?뚰겕?ㅽ럹?댁뒪
               </button>
               <button
                 className={settingsSection === "widgets" ? "active" : ""}
                 onClick={() => setSettingsSection("widgets")}
               >
-                위젯 스타일
-              </button>
+                ?꾩젽 ?ㅽ???              </button>
               <button
                 className={settingsSection === "sizes" ? "active" : ""}
                 onClick={() => setSettingsSection("sizes")}
               >
-                위젯 크기
+                ?꾩젽 ?ш린
               </button>
               <button
                 className={settingsSection === "theme" ? "active" : ""}
                 onClick={() => setSettingsSection("theme")}
               >
-                페이지 테마
+                ?섏씠吏 ?뚮쭏
               </button>
               <button
                 className={settingsSection === "other" ? "active" : ""}
                 onClick={() => setSettingsSection("other")}
               >
-                기타
+                湲고?
               </button>
               <button
                 className={settingsSection === "data" ? "active" : ""}
                 onClick={() => setSettingsSection("data")}
               >
-                데이터 관리
-              </button>
+                ?곗씠??愿由?              </button>
             </aside>
             <section>
               {settingsSection === "workspaces" ? (
@@ -2058,16 +2047,15 @@ export default function Home() {
                   <div className="settings-heading">
                     <div>
                       <small>SETTINGS</small>
-                      <h2>워크스페이스 관리</h2>
+                      <h2>?뚰겕?ㅽ럹?댁뒪 愿由?/h2>
                       <p>
-                        워크스페이스를 추가하거나 이름을 바꾸고 삭제할 수
-                        있습니다.
+                        ?뚰겕?ㅽ럹?댁뒪瑜?異붽??섍굅???대쫫??諛붽씀怨???젣????                        ?덉뒿?덈떎.
                       </p>
                     </div>
                     <button
                       onClick={() => {
                         const name = prompt(
-                          "새 워크스페이스 이름",
+                          "???뚰겕?ㅽ럹?댁뒪 ?대쫫",
                           `SPACE ${store.workspaces.length + 1}`,
                         );
                         if (!name) return;
@@ -2079,7 +2067,7 @@ export default function Home() {
                         }));
                       }}
                     >
-                      ＋ 새 워크스페이스
+                      竊????뚰겕?ㅽ럹?댁뒪
                     </button>
                   </div>
                   <div className="workspace-manager">
@@ -2101,7 +2089,7 @@ export default function Home() {
                           <button
                             onClick={() => {
                               const name = prompt(
-                                "워크스페이스 이름 변경",
+                                "?뚰겕?ㅽ럹?댁뒪 ?대쫫 蹂寃?,
                                 ws.name,
                               );
                               if (!name) return;
@@ -2113,15 +2101,14 @@ export default function Home() {
                               }));
                             }}
                           >
-                            이름 변경
-                          </button>
+                            ?대쫫 蹂寃?                          </button>
                           <button
                             className="danger"
                             disabled={store.workspaces.length === 1}
                             onClick={() => {
                               if (
                                 !confirm(
-                                  `'${ws.name}' 워크스페이스와 포함된 위젯을 삭제할까요?`,
+                                  `'${ws.name}' ?뚰겕?ㅽ럹?댁뒪? ?ы븿???꾩젽????젣?좉퉴??`,
                                 )
                               )
                                 return;
@@ -2143,7 +2130,7 @@ export default function Home() {
                               });
                             }}
                           >
-                            삭제
+                            ??젣
                           </button>
                         </div>
                       </div>
@@ -2155,9 +2142,9 @@ export default function Home() {
                   <div className="settings-heading">
                     <div>
                       <small>APPEARANCE</small>
-                      <h2>위젯 테두리</h2>
+                      <h2>?꾩젽 ?뚮몢由?/h2>
                       <p>
-                        새 위젯에 적용할 타입별 기본 테두리 색상을 설정합니다.
+                        ???꾩젽???곸슜????낅퀎 湲곕낯 ?뚮몢由??됱긽???ㅼ젙?⑸땲??
                       </p>
                     </div>
                   </div>
@@ -2177,22 +2164,22 @@ export default function Home() {
                       <label key={type}>
                         <span className={`kind kind-${type}`}>
                           {type === "bookmark"
-                            ? "↗"
+                            ? "??
                             : type === "note"
-                              ? "≡"
+                              ? "??
                               : type === "todo"
-                                ? "✓"
+                                ? "??
                                 : type === "todolist"
-                                  ? "≣"
+                                  ? "??
                                 : type === "weather"
-                                  ? "☁"
+                                  ? "??
                                   : type === "calendar"
-                                    ? "□"
+                                    ? "??
                                     : type === "timer"
-                                      ? "◷"
+                                      ? "??
                                       : type === "countdown"
                                         ? "D"
-                                        : "⚡"}
+                                        : "??}
                         </span>
                         <strong>{type.toUpperCase()}</strong>
                         <input
@@ -2230,7 +2217,7 @@ export default function Home() {
                             }))
                           }
                         >
-                          기존 위젯에도 적용
+                          湲곗〈 ?꾩젽?먮룄 ?곸슜
                         </button>
                       </label>
                     ))}
@@ -2241,22 +2228,22 @@ export default function Home() {
                   <div className="settings-heading">
                     <div>
                       <small>LAYOUT</small>
-                      <h2>위젯 크기 프리셋</h2>
-                      <p>위젯 생성과 수정 시 선택할 크기를 관리합니다.</p>
+                      <h2>?꾩젽 ?ш린 ?꾨━??/h2>
+                      <p>?꾩젽 ?앹꽦怨??섏젙 ???좏깮???ш린瑜?愿由ы빀?덈떎.</p>
                     </div>
                     <button
                       onClick={() => {
-                        const name = prompt("프리셋 이름", "새 크기");
+                        const name = prompt("?꾨━???대쫫", "???ш린");
                         if (!name) return;
-                        const width = Number(prompt("너비(px)", "300"));
-                        const height = Number(prompt("높이(px)", "200"));
+                        const width = Number(prompt("?덈퉬(px)", "300"));
+                        const height = Number(prompt("?믪씠(px)", "200"));
                         if (
                           !Number.isFinite(width) ||
                           !Number.isFinite(height) ||
                           width < 240 ||
                           height < 150
                         )
-                          return setToast("최소 크기는 240×150입니다.");
+                          return setToast("理쒖냼 ?ш린??240횞150?낅땲??");
                         setStore((s) => ({
                           ...s,
                           settings: {
@@ -2269,7 +2256,7 @@ export default function Home() {
                         }));
                       }}
                     >
-                      ＋ 프리셋 추가
+                      竊??꾨━??異붽?
                     </button>
                   </div>
                   <div className="size-preset-list">
@@ -2283,17 +2270,17 @@ export default function Home() {
                         />
                         <strong>{preset.name}</strong>
                         <code>
-                          {preset.width} × {preset.height}
+                          {preset.width} 횞 {preset.height}
                         </code>
                         <button
                           onClick={() => {
-                            const name = prompt("프리셋 이름", preset.name);
+                            const name = prompt("?꾨━???대쫫", preset.name);
                             if (!name) return;
                             const width = Number(
-                              prompt("너비(px)", String(preset.width)),
+                              prompt("?덈퉬(px)", String(preset.width)),
                             );
                             const height = Number(
-                              prompt("높이(px)", String(preset.height)),
+                              prompt("?믪씠(px)", String(preset.height)),
                             );
                             if (
                               !Number.isFinite(width) ||
@@ -2301,7 +2288,7 @@ export default function Home() {
                               width < 240 ||
                               height < 150
                             )
-                              return setToast("최소 크기는 240×150입니다.");
+                              return setToast("理쒖냼 ?ш린??240횞150?낅땲??");
                             setStore((s) => ({
                               ...s,
                               settings: {
@@ -2315,7 +2302,7 @@ export default function Home() {
                             }));
                           }}
                         >
-                          수정
+                          ?섏젙
                         </button>
                         <button
                           className="danger"
@@ -2332,7 +2319,7 @@ export default function Home() {
                             }))
                           }
                         >
-                          삭제
+                          ??젣
                         </button>
                       </div>
                     ))}
@@ -2343,8 +2330,8 @@ export default function Home() {
                   <div className="settings-heading">
                     <div>
                       <small>APPEARANCE</small>
-                      <h2>페이지 테마</h2>
-                      <p>대시보드 전체의 색상 테마를 선택합니다.</p>
+                      <h2>?섏씠吏 ?뚮쭏</h2>
+                      <p>??쒕낫???꾩껜???됱긽 ?뚮쭏瑜??좏깮?⑸땲??</p>
                     </div>
                   </div>
                   <div className="theme-options">
@@ -2368,10 +2355,10 @@ export default function Home() {
                         </span>
                         <strong>
                           {theme === "dark"
-                            ? "다크"
+                            ? "?ㅽ겕"
                             : theme === "light"
-                              ? "화이트"
-                              : "파스텔 블루"}
+                              ? "?붿씠??
+                              : "?뚯뒪??釉붾（"}
                         </strong>
                       </button>
                     ))}
@@ -2382,15 +2369,15 @@ export default function Home() {
                   <div className="settings-heading">
                     <div>
                       <small>COMPANION</small>
-                      <h2>기타 설정</h2>
-                      <p>대시보드의 부가 기능을 설정합니다.</p>
+                      <h2>湲고? ?ㅼ젙</h2>
+                      <p>??쒕낫?쒖쓽 遺媛 湲곕뒫???ㅼ젙?⑸땲??</p>
                     </div>
                   </div>
                   <div className="misc-options">
                     <label>
                       <div>
-                        <strong>치즈냥이</strong>
-                        <p>워크스페이스와 위젯 위를 돌아다니는 고양이입니다.</p>
+                        <strong>移섏쫰?μ씠</strong>
+                        <p>?뚰겕?ㅽ럹?댁뒪? ?꾩젽 ?꾨? ?뚯븘?ㅻ땲??怨좎뼇?댁엯?덈떎.</p>
                       </div>
                       <input
                         type="checkbox"
@@ -2408,9 +2395,9 @@ export default function Home() {
                     </label>
                     <label>
                       <div>
-                        <strong>매달린 침팬지</strong>
+                        <strong>留ㅻ떖由?移⑦뙩吏</strong>
                         <p>
-                          직접 드래그해 위젯 모서리에 배치할 수 있는 동료입니다.
+                          吏곸젒 ?쒕옒洹명빐 ?꾩젽 紐⑥꽌由ъ뿉 諛곗튂?????덈뒗 ?숇즺?낅땲??
                         </p>
                       </div>
                       <input
@@ -2429,8 +2416,8 @@ export default function Home() {
                     </label>
                     <label>
                       <div>
-                        <strong>고양이 애니메이션 속도</strong>
-                        <p>모든 행동의 재생 속도를 동일한 비율로 조절합니다.</p>
+                        <strong>怨좎뼇???좊땲硫붿씠???띾룄</strong>
+                        <p>紐⑤뱺 ?됰룞???ъ깮 ?띾룄瑜??숈씪??鍮꾩쑉濡?議곗젅?⑸땲??</p>
                       </div>
                       <span className="cat-speed-control">
                         <input
@@ -2448,7 +2435,7 @@ export default function Home() {
                               },
                             }))
                           }
-                          aria-label="고양이 애니메이션 속도"
+                          aria-label="怨좎뼇???좊땲硫붿씠???띾룄"
                         />
                         <output>{store.settings.catAnimationSpeed}x</output>
                       </span>
@@ -2460,24 +2447,23 @@ export default function Home() {
                   <div className="settings-heading">
                     <div>
                       <small>BACKUP</small>
-                      <h2>데이터 관리</h2>
+                      <h2>?곗씠??愿由?/h2>
                       <p>
-                        대시보드 전체 데이터를 파일로 내보내거나 이전 백업을
-                        가져옵니다.
+                        ??쒕낫???꾩껜 ?곗씠?곕? ?뚯씪濡??대낫?닿굅???댁쟾 諛깆뾽??                        媛?몄샃?덈떎.
                       </p>
                     </div>
                   </div>
                   <div className="data-actions">
                     <article>
-                      <strong>데이터 내보내기</strong>
-                      <p>워크스페이스, 위젯, 설정을 JSON 파일로 저장합니다.</p>
-                      <button onClick={exportJson}>↓ EXPORT</button>
+                      <strong>?곗씠???대낫?닿린</strong>
+                      <p>?뚰겕?ㅽ럹?댁뒪, ?꾩젽, ?ㅼ젙??JSON ?뚯씪濡???ν빀?덈떎.</p>
+                      <button onClick={exportJson}>??EXPORT</button>
                     </article>
                     <article>
-                      <strong>데이터 가져오기</strong>
-                      <p>저장해 둔 JSON 파일로 현재 대시보드를 복원합니다.</p>
+                      <strong>?곗씠??媛?몄삤湲?/strong>
+                      <p>??ν빐 ??JSON ?뚯씪濡??꾩옱 ??쒕낫?쒕? 蹂듭썝?⑸땲??</p>
                       <button onClick={() => fileRef.current?.click()}>
-                        ↑ IMPORT
+                        ??IMPORT
                       </button>
                       <input
                         ref={fileRef}
@@ -2582,14 +2568,13 @@ export default function Home() {
                   <span>{w.type.toUpperCase()}</span>
                   <div className="widget-tools">
                     <button
-                      aria-label="수정"
+                      aria-label="?섏젙"
                       onPointerDown={(e) => e.stopPropagation()}
                       onClick={() => setModal({ type: w.type, widgetId: w.id })}
                     >
-                      ✎
-                    </button>
+                      ??                    </button>
                     <button
-                      aria-label="복제"
+                      aria-label="蹂듭젣"
                       onPointerDown={(e) => e.stopPropagation()}
                       onClick={() =>
                         setStore((s) => ({
@@ -2609,14 +2594,13 @@ export default function Home() {
                         }))
                       }
                     >
-                      ⧉
-                    </button>
+                      樹?                    </button>
                     <button
-                      aria-label="삭제"
+                      aria-label="??젣"
                       onPointerDown={(e) => e.stopPropagation()}
                       onClick={() => remove(w.id)}
                     >
-                      ×
+                      횞
                     </button>
                   </div>
                 </div>
@@ -2656,7 +2640,7 @@ export default function Home() {
                       )}
                       {w.type === "note" && (
                         <textarea
-                          aria-label={`${w.title} 내용`}
+                          aria-label={`${w.title} ?댁슜`}
                           value={w.data.body || ""}
                           readOnly
                         />
@@ -2730,7 +2714,7 @@ export default function Home() {
           LOCAL STORAGE <b>ACTIVE</b>
         </span>
         <span>DATA STAYS ON THIS DEVICE</span>
-        <span>SSAFY DASHBOARD · V1.0.1</span>
+        <span>SSAFY DASHBOARD 쨌 V1.0.1</span>
       </footer>
       {modal && (
         <div
@@ -2746,17 +2730,17 @@ export default function Home() {
                 {modalWidget ? "EDIT" : "NEW"} / {modal.type.toUpperCase()}
               </span>
               <button type="button" onClick={() => setModal(null)}>
-                ×
+                횞
               </button>
             </div>
             <h2>
               {modalWidget
-                ? "위젯 수정"
-                : `새 ${modal.type === "bookmark" ? "북마크" : modal.type === "note" ? "메모" : modal.type === "todo" ? "할 일" : modal.type === "todolist" ? "TODO LIST" : modal.type === "weather" ? "날씨" : modal.type === "calendar" ? "달력" : modal.type === "timer" ? "학습 타이머" : modal.type === "countdown" ? "카운트다운" : "위젯"}`}
+                ? "?꾩젽 ?섏젙"
+                : `??${modal.type === "bookmark" ? "遺곷쭏?? : modal.type === "note" ? "硫붾え" : modal.type === "todo" ? "???? : modal.type === "todolist" ? "TODO LIST" : modal.type === "weather" ? "?좎뵪" : modal.type === "calendar" ? "?щ젰" : modal.type === "timer" ? "?숈뒿 ??대㉧" : modal.type === "countdown" ? "移댁슫?몃떎?? : "?꾩젽"}`}
             </h2>
             {modal.type !== "calendar" && (
               <label>
-                제목
+                ?쒕ぉ
                 <input
                   name="title"
                   required={
@@ -2767,29 +2751,29 @@ export default function Home() {
                     modalWidget?.title ||
                     (modal.type === "todolist" ? "TODO LIST" : "")
                   }
-                  placeholder="제목을 입력하세요"
+                  placeholder="?쒕ぉ???낅젰?섏꽭??
                 />
               </label>
             )}
             <label>
-              위젯 크기
+              ?꾩젽 ?ш린
               <select
                 name="sizePreset"
                 defaultValue={
                   modalWidget ? "" : store.settings.sizePresets[0].id
                 }
               >
-                {modalWidget && <option value="">변경 안 함</option>}
+                {modalWidget && <option value="">蹂寃?????/option>}
                 {store.settings.sizePresets.map((preset) => (
                   <option key={preset.id} value={preset.id}>
-                    {preset.name} · {preset.width}×{preset.height}
+                    {preset.name} 쨌 {preset.width}횞{preset.height}
                   </option>
                 ))}
               </select>
             </label>
             {modalWidget && (
               <label>
-                워크스페이스
+                ?뚰겕?ㅽ럹?댁뒪
                 <select
                   name="workspaceId"
                   defaultValue={modalWidget.workspaceId}
@@ -2803,7 +2787,7 @@ export default function Home() {
               </label>
             )}
             <label>
-              테두리 색상
+              ?뚮몢由??됱긽
               <input
                 className="color-input"
                 name="borderColor"
@@ -2816,12 +2800,12 @@ export default function Home() {
             </label>
             {modal.type === "note" && (
               <label>
-                내용
+                ?댁슜
                 <textarea
                   name="content"
                   rows={5}
                   defaultValue={modalWidget?.data.body}
-                  placeholder="메모를 입력하세요"
+                  placeholder="硫붾え瑜??낅젰?섏꽭??
                 />
               </label>
             )}
@@ -2831,7 +2815,7 @@ export default function Home() {
             )}
             {modal.type === "timer" && (
               <label>
-                학습 시간(분)
+                ?숈뒿 ?쒓컙(遺?
                 <input
                   name="timerMinutes"
                   type="number"
@@ -2845,7 +2829,7 @@ export default function Home() {
             {modal.type === "countdown" && (
               <>
                 <label>
-                  목표 날짜
+                  紐⑺몴 ?좎쭨
                   <input
                     name="countdownDate"
                     type="date"
@@ -2867,8 +2851,7 @@ export default function Home() {
             {modal.type === "todo" && (
               <>
                 <label>
-                  마감일
-                  <input
+                  留덇컧??                  <input
                     name="due"
                     type="date"
                     defaultValue={
@@ -2879,7 +2862,7 @@ export default function Home() {
                   />
                 </label>
                 <label>
-                  우선순위
+                  ?곗꽑?쒖쐞
                   <select
                     name="priority"
                     defaultValue={modalWidget?.data.priority || "MEDIUM"}

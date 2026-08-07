@@ -11,7 +11,7 @@ test("includes the core dashboard capabilities", async () => {
     '"bookmark"',
     '"note"',
     '"todo"',
-    "WIDGET＋",
+    "WIDGET竊?,
     "LOCAL STORAGE",
     "backupSchema",
     "interact(",
@@ -94,6 +94,8 @@ test("adds a draggable chimp companion with cat interaction", async () => {
   assert.match(source, /document\.documentElement\.dataset\.catPlatform/);
   assert.match(source, /currentCatPlatform !== placement\.widgetId/);
   assert.match(source, /excludeIds: \[placement\.widgetId\]/);
+  assert.match(source, /firing \? 68 : 33\.5/);
+  assert.match(source, /firing \? 60 : 94\.5/);
   assert.doesNotMatch(source, /cooldownRef/);
   assert.match(styles, /\.dashboard-chimp/);
   assert.match(styles, /background-size: 2048px 96px/);
