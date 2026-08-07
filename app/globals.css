@@ -1267,7 +1267,10 @@ button {
   width: 96px;
   height: 96px;
   z-index: 2147481500;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
+  border: 0;
+  outline: none;
   transform-origin: 50% 100%;
   will-change: transform;
   filter: drop-shadow(0 7px 5px #0005);

@@ -28,7 +28,7 @@ test("keeps the dashboard cat in exactly one sprite state", async () => {
   for (const sprite of ["sit", "crouch", "loaf", "jump", "groom", "wheel"])
     assert.match(source, new RegExp(`pixel-cat-${sprite}\\.webp`));
 
-  assert.match(source, /setPose\("jump"\)/);
+  assert.match(source, /showPose\("jump"\)/);
   assert.doesNotMatch(source, /setPose\("sleep"\)/);
   assert.doesNotMatch(source, /setPose\(distance/);
   assert.match(
@@ -63,4 +63,18 @@ test("keeps cat landings stable and away from widget corners", async () => {
   assert.match(source, /platformRef\.current !== "workspace-bar"\) await travel/);
   assert.match(source, /fill: "forwards"/);
   assert.match(source, /animation\.commitStyles\(\)/);
+});
+
+test("supports direct cat interaction and idle changes on one platform", async () => {
+  const source = await readFile(
+    new URL("../app/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /dashboard:cat-click/);
+  assert.match(source, /role="button"/);
+  assert.match(source, /settle\(target, "sit"\)/);
+  assert.match(source, /scheduleRestPose\(1800 \+ Math\.random\(\) \* 2200\)/);
+  assert.match(source, /candidate !== poseRef\.current/);
+  assert.match(source, /}, 700\);/);
 });

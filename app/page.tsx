@@ -979,6 +979,7 @@ function DashboardCat({
   const destinationRef = useRef("");
   const movementRef = useRef<Animation | null>(null);
   const movementIdRef = useRef(0);
+  const poseRef = useRef<CatPose>("sit");
   const [position, setPosition] = useState(positionRef.current);
   const [pose, setPose] = useState<CatPose>("sit");
   const [facingLeft, setFacingLeft] = useState(false);
@@ -986,6 +987,7 @@ function DashboardCat({
   useEffect(() => {
     if (!enabled) return;
     let timer = 0;
+    let restTimer = 0;
     let cancelled = false;
     type CatTarget = { x: number; y: number; platformId: string };
     const boundaryY = () => {
@@ -1024,13 +1026,29 @@ function DashboardCat({
       const point = bar ? locate(bar) : { x: 80, y: boundaryY() };
       return { ...point, x: Math.max(80, point.x + 70), platformId: "workspace-bar" };
     };
+    const showPose = (nextPose: CatPose) => {
+      poseRef.current = nextPose;
+      setPose(nextPose);
+    };
+    const scheduleRestPose = (delay = 7000 + Math.random() * 6000) => {
+      window.clearTimeout(restTimer);
+      restTimer = window.setTimeout(() => {
+        if (cancelled || document.hidden || platformRef.current === "airborne")
+          return;
+        const alternatives = CAT_REST_POSES.filter(
+          (candidate) => candidate !== poseRef.current,
+        );
+        showPose(alternatives[Math.floor(Math.random() * alternatives.length)]);
+        scheduleRestPose();
+      }, delay);
+    };
     const settle = (next: CatTarget, nextPose: CatPose) => {
       positionRef.current = next;
       platformRef.current = next.platformId;
       destinationRef.current = "";
       movementRef.current = null;
       setPosition(next);
-      setPose(nextPose);
+      showPose(nextPose);
     };
     const availableWidgets = (excludedId?: string): CatTarget[] =>
       Array.from(document.querySelectorAll<HTMLElement>(".widget .widget-top"))
@@ -1055,6 +1073,7 @@ function DashboardCat({
     const travel = async (target: CatTarget) => {
       const element = catRef.current;
       if (!element || cancelled) return;
+      window.clearTimeout(restTimer);
       const movementId = ++movementIdRef.current;
       const computedTransform = getComputedStyle(element).transform;
       if (movementRef.current && computedTransform !== "none") {
@@ -1073,7 +1092,7 @@ function DashboardCat({
       platformRef.current = "airborne";
       destinationRef.current = target.platformId;
       setFacingLeft(target.x < start.x);
-      setPose("jump");
+      showPose("jump");
       const flightSeconds = Math.min(1.45, 0.68 + distance / 700);
       const jumpHeight = Math.min(105, Math.max(42, distance * 0.2));
       const apexY = Math.max(
@@ -1131,9 +1150,8 @@ function DashboardCat({
       if (!cancelled && movementId === movementIdRef.current) {
         animation.commitStyles();
         animation.cancel();
-        const nextPose =
-          CAT_REST_POSES[Math.floor(Math.random() * CAT_REST_POSES.length)];
-        settle(target, nextPose);
+        settle(target, "sit");
+        scheduleRestPose(1800 + Math.random() * 2200);
       }
     };
     const chooseNext = async () => {
@@ -1187,6 +1205,13 @@ function DashboardCat({
         if (!cancelled) schedule();
       }, 7000);
     };
+    const sendCatAway = async () => {
+      if (platformRef.current === "airborne") return;
+      window.clearTimeout(timer);
+      window.clearTimeout(restTimer);
+      await chooseNext();
+      if (!cancelled) schedule();
+    };
     const visibility = () => {
       if (document.hidden) {
         catRef.current?.getAnimations().forEach((animation) => animation.pause());
@@ -1199,17 +1224,23 @@ function DashboardCat({
     window.addEventListener("dashboard:widget-drag-start", escapeMovingWidget);
     window.addEventListener("dashboard:workspace-change", changeWorkspace);
     window.addEventListener("dashboard:settings-open", moveToWorkspaceBar);
-    schedule();
+    window.addEventListener("dashboard:cat-click", sendCatAway);
+    timer = window.setTimeout(async () => {
+      await chooseNext();
+      if (!cancelled) schedule();
+    }, 700);
     return () => {
       cancelled = true;
       movementIdRef.current += 1;
       window.clearTimeout(timer);
+      window.clearTimeout(restTimer);
       movementRef.current?.cancel();
       catRef.current?.getAnimations().forEach((animation) => animation.cancel());
       document.removeEventListener("visibilitychange", visibility);
       window.removeEventListener("dashboard:widget-drag-start", escapeMovingWidget);
       window.removeEventListener("dashboard:workspace-change", changeWorkspace);
       window.removeEventListener("dashboard:settings-open", moveToWorkspaceBar);
+      window.removeEventListener("dashboard:cat-click", sendCatAway);
     };
   }, [enabled]);
 
@@ -1221,6 +1252,14 @@ function DashboardCat({
       style={{
         transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
         ["--cat-cycle-duration" as string]: `${1 / speed}s`,
+      }}
+      role="button"
+      tabIndex={0}
+      onClick={() => window.dispatchEvent(new Event("dashboard:cat-click"))}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        window.dispatchEvent(new Event("dashboard:cat-click"));
       }}
       aria-label="대시보드를 돌아다니는 치즈냥이"
       title="치즈냥이"
