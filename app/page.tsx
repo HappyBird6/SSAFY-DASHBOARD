@@ -1797,7 +1797,7 @@ export default function Home() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const type = modal!.type;
-    const title = String(
+    const title = type === "search" ? "" : String(
       form.get("title") ||
         (type === "todolist"
           ? "TODO LIST"
@@ -1805,7 +1805,7 @@ export default function Home() {
             ? "열대어"
           : type === "calendar"
           ? "달력"
-          : type === "timer" || type === "countdown" || type === "search"
+          : type === "timer" || type === "countdown"
             ? ""
             : "새 위젯"),
     );
@@ -2879,15 +2879,14 @@ export default function Home() {
                 ? "위젯 수정"
                 : `새 ${modal.type === "bookmark" ? "북마크" : modal.type === "note" ? "메모" : modal.type === "todo" ? "할 일" : modal.type === "todolist" ? "TODO LIST" : modal.type === "weather" ? "날씨" : modal.type === "calendar" ? "달력" : modal.type === "timer" ? "학습 타이머" : modal.type === "countdown" ? "카운트다운" : "위젯"}`}
             </h2>
-            {modal.type !== "calendar" && (
+            {modal.type !== "calendar" && modal.type !== "search" && (
               <label>
                 제목
                 <input
                   name="title"
                   required={
                     modal.type !== "timer" &&
-                    modal.type !== "countdown" &&
-                    modal.type !== "search"
+                    modal.type !== "countdown"
                   }
                   autoFocus
                   defaultValue={

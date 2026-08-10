@@ -127,6 +127,8 @@ test("adds a Google and Naver search widget", async () => {
   assert.match(source, /https:\/\/search\.naver\.com\/search\.naver\?query=/);
   assert.match(source, /role="radiogroup"/);
   assert.match(source, /searchEngine/);
+  assert.match(source, /type === "search" \? "" : String/);
+  assert.match(source, /modal\.type !== "search"/);
   assert.match(styles, /\.search-engine-options/);
   assert.match(styles, /#ec4899/);
 });
