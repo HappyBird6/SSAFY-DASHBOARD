@@ -11,7 +11,7 @@ test("includes the core dashboard capabilities", async () => {
     '"bookmark"',
     '"note"',
     '"todo"',
-    "WIDGET竊?,
+    "WIDGET＋",
     "LOCAL STORAGE",
     "backupSchema",
     "interact(",
@@ -103,4 +103,16 @@ test("adds a draggable chimp companion with cat interaction", async () => {
   assert.match(styles, /animation: chimp-fire-frames 2\.1s/);
   assert.match(styles, /animation: chimp-hang-frames 2\.4s/);
   assert.match(styles, /\.dashboard-chimp\.chimp-fire > span/);
+});
+
+test("keeps companions inside the viewport and hides the chimp in settings", async () => {
+  const [source, styles] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(source, /document\.documentElement\.clientWidth/);
+  assert.match(source, /window\.addEventListener\("resize", keepInViewport\)/);
+  assert.match(source, /enabled=\{store\.settings\.chimpEnabled && !settingsOpen\}/);
+  assert.match(styles, /overflow-x: clip/);
 });
