@@ -1215,6 +1215,64 @@ button {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+.widget-search .widget-body {
+  padding: 14px;
+}
+.search-widget-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+}
+.search-engine-options {
+  display: flex;
+  gap: 8px;
+}
+.search-engine-options label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  background: var(--control-bg);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 10px;
+}
+.search-engine-options label.active {
+  color: #ec4899;
+  border-color: #ec4899;
+  background: #ec489914;
+}
+.search-engine-options input {
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  accent-color: #ec4899;
+}
+.search-query-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.search-query-row input {
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: var(--control-bg);
+  color: var(--text);
+  padding: 11px 12px;
+  outline: none;
+}
+.search-query-row input:focus {
+  border-color: #ec4899;
+}
+.search-query-row button {
+  border: 1px solid #ec4899;
+  background: #ec489918;
+  color: #ec4899;
+  padding: 0 14px;
+}
 .countdown-size-picker,
 .bookmark-links-editor {
   display: grid;

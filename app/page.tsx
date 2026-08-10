@@ -13,6 +13,7 @@ type Kind =
   | "calendar"
   | "timer"
   | "countdown"
+  | "search"
   | "fish"
   | "launcher";
 type Layout = {
@@ -50,6 +51,7 @@ type Widget = {
     timerEndsAt?: string;
     countdownDate?: string;
     countdownFontSize?: number;
+    searchEngine?: "google" | "naver";
     launcherLabel?: string;
     launcherUrl?: string;
     fishSpecies?: string;
@@ -96,6 +98,7 @@ const backupSchema = z.object({
         calendar: z.string().optional(),
         timer: z.string().optional(),
         countdown: z.string().optional(),
+        search: z.string().optional(),
         launcher: z.string().optional(),
         fish: z.string().optional(),
       })
@@ -149,6 +152,7 @@ const backupSchema = z.object({
         "calendar",
         "timer",
         "countdown",
+        "search",
         "fish",
         "launcher",
         "launcher",
@@ -187,6 +191,7 @@ const backupSchema = z.object({
         timerEndsAt: z.string().optional(),
         countdownDate: z.string().optional(),
         countdownFontSize: z.number().optional(),
+        searchEngine: z.enum(["google", "naver"]).optional(),
         launcherLabel: z.string().optional(),
         launcherUrl: z.string().optional(),
         fishSpecies: z.string().optional(),
@@ -208,6 +213,7 @@ const DEFAULT_WIDGET_COLORS: Record<Kind, string> = {
   calendar: "#f59e0b",
   timer: "#22c55e",
   countdown: "#f97316",
+  search: "#ec4899",
   fish: "#22d3ee",
   launcher: "#60a5fa",
 };
@@ -790,6 +796,54 @@ function CountdownWidget({ widget }: { widget: Widget }) {
     <div className="countdown-content">
       <strong style={{ fontSize }}>{text}</strong>
     </div>
+  );
+}
+
+function SearchWidget({
+  widget,
+  onEngine,
+}: {
+  widget: Widget;
+  onEngine: (engine: "google" | "naver") => void;
+}) {
+  const [query, setQuery] = useState("");
+  const engine = widget.data.searchEngine || "google";
+  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const keyword = query.trim();
+    if (!keyword) return;
+    const url =
+      engine === "naver"
+        ? `https://search.naver.com/search.naver?query=${encodeURIComponent(keyword)}`
+        : `https://www.google.com/search?q=${encodeURIComponent(keyword)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <form className="search-widget-content" onSubmit={submit}>
+      <div className="search-engine-options" role="radiogroup" aria-label="검색 엔진">
+        {(["google", "naver"] as const).map((option) => (
+          <label key={option} className={engine === option ? "active" : ""}>
+            <input
+              type="radio"
+              name={`search-engine-${widget.id}`}
+              checked={engine === option}
+              onChange={() => onEngine(option)}
+            />
+            <span>{option.toUpperCase()}</span>
+          </label>
+        ))}
+      </div>
+      <div className="search-query-row">
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="검색어를 입력하세요"
+          aria-label="검색어"
+        />
+        <button type="submit">SEARCH</button>
+      </div>
+    </form>
   );
 }
 
@@ -1751,7 +1805,7 @@ export default function Home() {
             ? "열대어"
           : type === "calendar"
           ? "달력"
-          : type === "timer" || type === "countdown"
+          : type === "timer" || type === "countdown" || type === "search"
             ? ""
             : "새 위젯"),
     );
@@ -1770,7 +1824,12 @@ export default function Home() {
       form.get("countdownFontSize") || modalWidget?.data.countdownFontSize || 56,
     );
     const data =
-      type === "timer"
+      type === "search"
+        ? {
+            searchEngine:
+              modalWidget?.data.searchEngine || ("google" as const),
+          }
+      : type === "timer"
           ? {
               timerMinutes: Number(form.get("timerMinutes") || 25),
               timerRemaining: Number(form.get("timerMinutes") || 25) * 60,
@@ -1859,6 +1918,8 @@ export default function Home() {
               ? { width: 360, height: 300 }
             : type === "weather"
               ? { width: 330, height: 270 }
+              : type === "search"
+                ? { width: 320, height: 180 }
               : type === "bookmark"
                 ? {
                     width: 250,
@@ -2014,6 +2075,7 @@ export default function Home() {
                 "calendar",
                 "timer",
                 "countdown",
+                "search",
               ] as Kind[]
             ).map((type) => (
               <button
@@ -2224,6 +2286,7 @@ export default function Home() {
                         "calendar",
                         "timer",
                         "countdown",
+                        "search",
                       ] as Kind[]
                     ).map((type) => (
                       <label key={type}>
@@ -2768,6 +2831,16 @@ export default function Home() {
                       {w.type === "countdown" && (
                         <CountdownWidget widget={w} />
                       )}
+                      {w.type === "search" && (
+                        <SearchWidget
+                          widget={w}
+                          onEngine={(searchEngine) =>
+                            update(w.id, {
+                              data: { ...w.data, searchEngine },
+                            })
+                          }
+                        />
+                      )}
                     </>
                   )}
                 </div>
@@ -2812,7 +2885,9 @@ export default function Home() {
                 <input
                   name="title"
                   required={
-                    modal.type !== "timer" && modal.type !== "countdown"
+                    modal.type !== "timer" &&
+                    modal.type !== "countdown" &&
+                    modal.type !== "search"
                   }
                   autoFocus
                   defaultValue={

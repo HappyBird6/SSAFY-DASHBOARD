@@ -116,3 +116,17 @@ test("keeps companions inside the viewport and hides the chimp in settings", asy
   assert.match(source, /enabled=\{store\.settings\.chimpEnabled && !settingsOpen\}/);
   assert.match(styles, /overflow-x: clip/);
 });
+
+test("adds a Google and Naver search widget", async () => {
+  const [source, styles] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(source, /https:\/\/www\.google\.com\/search\?q=/);
+  assert.match(source, /https:\/\/search\.naver\.com\/search\.naver\?query=/);
+  assert.match(source, /role="radiogroup"/);
+  assert.match(source, /searchEngine/);
+  assert.match(styles, /\.search-engine-options/);
+  assert.match(styles, /#ec4899/);
+});
